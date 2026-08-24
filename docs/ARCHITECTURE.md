@@ -25,6 +25,8 @@ Spirit state machine ────────→ immediate VisualCue
                                       └────→ output arbiter
 ```
 
+导轨主机的载体参考 IMU 位于刚性导轨根部。屏幕舱具有独立 yaw/pitch/roll 三轴，屏幕调整不得进入 motion 观察；否则用户调屏会污染 Held/Ready 判定。
+
 ## 2. 状态机
 
 v0.1 状态闭集：

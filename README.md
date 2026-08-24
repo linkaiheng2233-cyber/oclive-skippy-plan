@@ -8,6 +8,8 @@
 
 套件机械目标是「一套电子核心 + 可更换导轨安装件」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，导轨主机使用内置 IMU，握把等远端感知使用可拆卸 BLE 功能节点；状态判断不依赖磁性放置底座。
 
+显示机构采用相机侧翻屏大小的三轴屏幕舱：固定导轨根部承载载体参考 IMU，yaw/pitch/roll 三个恒扭矩转轴负责调姿，屏幕后方容纳主板与可充电主机电池。屏幕边缘缓冲框在收纳贴合时先承力，LCD 玻璃保持内缩。
+
 ## 项目分层
 
 | 层 | 职责 | 所在位置 |
@@ -74,6 +76,8 @@ cargo run -- --port 8420
 - [Linux/ARM64 适配路线](docs/LINUX_ARM64.md)
 - [RADIAN MODEL 1 套件路线](docs/PROTOTYPE_KIT.md)
 - [通用导轨机械接口](docs/MECHANICAL_INTERFACE.md)
+- [三轴屏幕舱与导轨机构](docs/DISPLAY_ASSEMBLY.md)
+- [屏幕后置主机电池与充放电路线](docs/MAIN_POWER.md)
 - [传感器候选与实测计划](docs/SENSOR_OPTIONS.md)
 - [BLE 无线功能传感器网络](docs/WIRELESS_SENSOR_NETWORK.md)
 - [无线节点电池与功耗预算](docs/POWER_BUDGET.md)

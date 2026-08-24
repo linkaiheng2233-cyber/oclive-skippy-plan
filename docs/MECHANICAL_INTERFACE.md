@@ -15,14 +15,17 @@
 
 ```text
 电子核心
-  board + screen + onboard sensors + power/network + BLE central
+  display pod: screen + main board + rechargeable battery + network
         │
-        └── 固定机械接口（待原型实测后冻结）
+        └── 3-axis constant-torque arm
                     │
-                    ├── Picatinny base（首发）
-                    ├── M-LOK adapter（后续）
-                    ├── KeyMod adapter（后续）
-                    └── strap/adhesive fixture（独立评审）
+                    └── fixed sensor root: rail-referenced IMU
+                                │
+                                └── rigid mechanical interface
+                                            ├── Picatinny base（首发）
+                                            ├── M-LOK adapter（后续）
+                                            ├── KeyMod adapter（后续）
+                                            └── strap/adhesive fixture（独立评审）
 
 独立 Grip/Shoulder Node 不属于电子核心底座。它们通过各自的可逆表面固定件安装，并通过 BLE 与主模块通信；更换载体时只需要更换节点固定件和校准配置。
 ```
@@ -32,12 +35,16 @@
 ## 3. v0.1 机械原则
 
 - 快拆、非承力、可逆安装。
+- 导轨夹具刚性锁定、不得用沿导轨滑移制造阻尼；屏幕角度由 yaw/pitch/roll 三轴转轴的恒扭矩/预紧摩擦保持。
 - 不接内部火控、扳机、供弹或动力结构。
 - 不要求机内走线。
 - 不遮挡瞄具、主要操作件、握持区和拆装路径。
 - 线缆留在主套件内部；外部功能节点使用无线，自带电源和可逆固定。外部有线只允许台架采样，不进入默认上枪形态。
 - 断电套件先做装配检查，通过后才做通电静态测试。
 - 实物测量是 SSOT；宣传尺寸、网图和第三方模型只作参考。
+- 固定 IMU 必须位于导轨根部，屏幕转动不能改变载体参考姿态。
+- 三个有线转轴都有硬限位与应力释放，不使用无限旋转或滑环。
+- 屏幕边框泡棉先接触收纳平面，LCD 与电池均不得成为结构承力件。
 
 ## 4. 首台验证载体
 
@@ -45,7 +52,8 @@
 
 - 皮卡汀尼底座能否可靠快拆。
 - 屏幕在收起/展开时的视线与操作净空。
-- 小型开发板与屏幕适合一体还是分体。
+- 三轴屏幕能否从不同导轨位置调整到可视角并贴身收纳。
+- 主板随屏幕移动与主板固定两种布局的质量/线缆取舍。
 - 套件重量和位置是否明显破坏重心。
 - 主模块内置 IMU 能否获得足够稳定的动作特征。
 
@@ -63,6 +71,9 @@ RADIAN 专属测量与外壳数据进入独立适配记录，不反向污染通�
 | mount | 底座/夹具版本 |
 | module_layout | 一体/分体与安装位置 |
 | mass | 模块与整套重量 |
+| display_axes | 三轴角度包络、操作力、保持力矩与限位 |
+| cable_cycles | 跨轴线缆循环次数与异常 |
+| battery_dummy | 主电池等质量/等厚度假体版本 |
 | observations | 视线、操作、松动、线缆、拆装 |
 | decision | 保留、修改或淘汰及原因 |
 

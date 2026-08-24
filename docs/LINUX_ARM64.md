@@ -102,4 +102,4 @@ app
 8. 加 systemd/udev/watchdog 并做两小时 soak。
 9. 套件通过后才开始 RADIAN MODEL 1 外壳与导轨适配。
 
-语音、触觉、相机和主机电池优化不与这条路线并行开发。一个 Grip Node 的 BLE 与 CR2032 功耗验证属于当前传感器主链。
+语音、触觉和相机不与这条路线并行开发。Grip Node 的 BLE/CR2032 与屏幕后置主机电池都属于 S4，但主机电芯只能在屏亮/屏灭、Wi-Fi、BLE 和云端回合功耗实测后选择。
