@@ -1,0 +1,7 @@
+{
+  "chat_storage": {
+    "backend": "hybrid",
+    "max_messages_per_session": 500,
+    "replay_similarity_threshold": 0.6
+  }
+}

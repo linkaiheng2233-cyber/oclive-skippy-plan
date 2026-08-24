@@ -1,0 +1,10 @@
+# 高耦合编译配置
+# 由 oclive init 生成；oclive build 读取并重新生成 process_message_monolith.rs
+# 不参与运行时，可安全删除以恢复标准模式
+#
+# 约束：weld_modules 与 exclude 不能同时非空。
+
+[monolith]
+enabled = true
+weld_modules = ["memory", "emotion", "event", "prompt", "llm", "agent", "complex_emotion"]
+exclude = []

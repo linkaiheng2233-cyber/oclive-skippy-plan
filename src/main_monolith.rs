@@ -1,0 +1,32 @@
+//! `oclive-skippy-spirit` — Monolith 专用入口（与 `src/main.rs` 分离，避免 Cargo 多 bin 同路径警告）。
+//!
+//! 构建：`cargo run --features monolith` 或 `cargo build --release --features monolith`。
+
+mod process_message_monolith;
+
+fn kernel_bench_iterations() -> u32 {
+    std::env::var("OCLIVE_KERNEL_BENCH_ITERS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(1)
+        .min(1_000_000)
+}
+
+fn init_kernel_tracing() {
+    use tracing_subscriber::EnvFilter;
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .try_init();
+}
+
+fn main() {
+    init_kernel_tracing();
+    let n = kernel_bench_iterations();
+    tracing::info!("oclive-skippy-spirit — monolith build");
+    for _ in 0..n {
+        process_message_monolith::run_monolith_pipeline_demo();
+    }
+}

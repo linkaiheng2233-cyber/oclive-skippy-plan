@@ -1,0 +1,30 @@
+{
+  "_comment_agent": "Agent / 工具编排 (ReAct)。常用: builtin | remote | directory。预设 minimal 在 JSON 中省略本键（语义「不额外声明」= 宿主默认 builtin）。选 none 且需写入 JSON 时: 主应用无 none，请省略 agent 键。",
+  "_comment_complex_emotion": "复杂情感扩展（路线图）。可写 builtin | remote | directory | none 作团队约定；当前桌面 PluginBackends 不含此槽，宿主加载时会忽略。remote 时需侧车并实现协议（见 REMOTE_PLUGIN_PROTOCOL.md）。",
+  "_comment_emotion": "用户情绪分析 (emotion.analyze)。常用: builtin | remote | directory（builtin_v2 读兼容 alias）。选 none：跳过该子系统（主应用请删除键或改为 builtin）。",
+  "_comment_event": "事件影响估计 (event.estimate)。常用: builtin | remote | directory（builtin_v2 读兼容 alias）。选 none：跳过事件估计链（主应用请删除键或改为 builtin）。",
+  "_comment_llm": "主对话 LLM (llm.generate)。主应用枚举: ollama（本机默认进程内客户端，需 Ollama）| remote（HTTP 侧车，需 OCLIVE_REMOTE_LLM_URL）| directory。若无本地模型，请改为 remote 并配置远端 URL。选 none：主生成链不可用（仅实验）。",
+  "_comment_memory": "记忆检索 (memory.rank)。常用: builtin | remote | directory | local（builtin_v2 为已废弃读兼容 alias，等同 builtin）。选 none：不参与检索排序（主应用无 none 枚举；若复制进 oclive 请删除该键或改为 builtin）。",
+  "_comment_plugin_backends": "七条编排槽位（与 PLUGIN_V1 / plugin_host 对齐）。主应用当前反序列化 6 个标准槽；complex_emotion 为扩展键，宿主会忽略未知字段。可选值以各槽枚举为准（见 SETTINGS_REFERENCE.md）。",
+  "_comment_prompt": "Prompt 组装 (prompt.build_prompt)。常用: builtin | remote | directory（builtin_v2 读兼容 alias）。选 none：无有效 prompt 组装（主应用请删除键或改为 builtin）。",
+  "_oclive_cli": {
+    "features": {
+      "use_complex_emotion": false
+    },
+    "generator": "oclive-cli",
+    "plugins": {
+      "directory_plugins": false,
+      "kernel_server_doc": false,
+      "oocp_doc": false
+    }
+  },
+  "plugin_backends": {
+    "complex_emotion": "none",
+    "emotion": "builtin",
+    "event": "builtin",
+    "llm": "ollama",
+    "memory": "builtin",
+    "prompt": "builtin"
+  },
+  "schema_version": 1
+}

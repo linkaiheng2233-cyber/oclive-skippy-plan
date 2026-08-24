@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oclive.dev/schemas/spirit/output-cue.v0.1.schema.json",
+  "title": "OCLive Spirit OutputCue v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "cue_id",
+    "cue_type",
+    "priority",
+    "ttl_ms",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "cue_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "cue_type": {
+      "enum": [
+        "visual",
+        "audio",
+        "haptic"
+      ]
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "ttl_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "payload": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/visualPayload"
+        },
+        {
+          "$ref": "#/$defs/audioPayload"
+        },
+        {
+          "$ref": "#/$defs/hapticPayload"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cue_type": {
+            "const": "visual"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/visualPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cue_type": {
+            "const": "audio"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/audioPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cue_type": {
+            "const": "haptic"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/hapticPayload"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "visualPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visual_state_id"
+      ],
+      "properties": {
+        "visual_state_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hud_state": {
+          "type": "object"
+        }
+      }
+    },
+    "audioPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "voice_mode": {
+          "enum": [
+            "cached",
+            "dynamic"
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "asset_id"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        }
+      ]
+    },
+    "hapticPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_id",
+        "intensity",
+        "duration_ms"
+      ],
+      "properties": {
+        "pattern_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    }
+  }
+}

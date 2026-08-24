@@ -1,0 +1,53 @@
+//! `oclive-skippy-spirit` — oclive-cli 生成的内核入口。
+//!
+//! 已接入 **oclivenewnew**（`--kernel-source`）：与 `oclive-kernel-server` 相同的无头 HTTP API。
+//! 高耦合构建使用独立入口 **`src/main_monolith.rs`**（`oclive-skippy-spirit-monolith` 二进制），见 `Cargo.toml` 中 `[[bin]]`。
+
+fn kernel_bench_iterations() -> u32 {
+    std::env::var("OCLIVE_KERNEL_BENCH_ITERS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(0)
+        .min(1_000_000)
+}
+
+fn main() {
+    let _ = oclivenewnew_tauri::init_tracing();
+    let bench_iters = kernel_bench_iterations();
+    if bench_iters > 0 {
+        for _ in 0..bench_iters {
+            tracing::info!(
+                target: "oclive_kernel_server",
+                version = oclive_kernel_runtime::RUNTIME_API_VERSION,
+                "kernel-linked bench smoke"
+            );
+        }
+        return;
+    }
+
+    let args: Vec<String> = std::env::args().collect();
+    if args
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "-h" || arg == "--help")
+    {
+        eprintln!(
+            "Usage: {} [--api] [--port PORT]\nEnv: OCLIVE_API_PORT, OCLIVE_HTTP_API_MOCK_LLM, OCLIVE_ROLES_DIR, RUST_LOG",
+            args[0]
+        );
+        return;
+    }
+    let cli_port = oclive_kernel_runtime::parse_api_port_arg(&args).unwrap_or_else(|error| {
+        eprintln!("[OCLIVE_CLI_INVALID_ARGUMENT] {error}");
+        std::process::exit(2);
+    });
+    let port = oclive_kernel_runtime::resolve_api_port(cli_port);
+    tracing::info!(
+        target: "oclive_kernel_server",
+        version = oclive_kernel_runtime::RUNTIME_API_VERSION,
+        port,
+        "starting headless HTTP API"
+    );
+    oclivenewnew_tauri::run_api_server(port);
+}

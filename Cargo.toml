@@ -1,0 +1,27 @@
+[package]
+name = "oclive-skippy-spirit"
+version = "0.1.0"
+edition = "2021"
+publish = false
+authors = ["supermumu"]
+license = "MIT"
+description = "OCLive 四季宝器灵实体角色宿主与模拟器"
+
+# 已接入 oclivenewnew 工作区（`oclive init --kernel-source`）。
+[dependencies]
+oclivenewnew-tauri = { path = "../oclivenewnew/distros/desktop-tauri" }
+oclive_kernel_runtime = { path = "../oclivenewnew/kernel/crates/oclive_kernel_runtime" }
+tracing = "0.1"
+oclive_monolith_builtin = { path = "vendor/oclive_monolith_builtin" }
+
+[features]
+default = []
+monolith = []
+[[bin]]
+name = "oclive-skippy-spirit"
+path = "src/main.rs"
+
+[[bin]]
+name = "oclive-skippy-spirit-monolith"
+path = "src/main_monolith.rs"
+required-features = ["monolith"]
