@@ -4,6 +4,10 @@
 
 当前状态：**仓库与无头内核骨架已建立；硬件尚未启动。下一里程碑是器灵模拟器与类型化输入来源契约。**
 
+首台原型载体固定为 **森柏龙 RADIAN MODEL 1**。实施顺序是桌面套件 → 套件外壳/导轨适配 → 上枪验证，不在软件和电子闭环完成前修改或连接载体内部机构。
+
+套件机械目标是「一套电子核心 + 可更换安装底座」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，首轮从主模块内置传感器开始。
+
 ## 项目分层
 
 | 层 | 职责 | 所在位置 |
@@ -47,6 +51,8 @@ ASR、TTS、扬声器、预渲染音频、触觉输出、相机、AI 视觉、�
 
 当前 `Cargo.toml` 通过相对路径依赖同级 `../oclivenewnew`，适合本地协同开发。发布前将根据 OCLive crate 的发行方式改成锁定的 Git revision 或正式版本依赖。
 
+算力采用主云端：板端运行传感器采集、DeviceEvent、状态机、轻量 OCLive Host、屏幕和断网降级；云端只负责 LLM 重推理。网络不可用时动态角色文本可以降级，但拿起、举起、触发、放回对应的屏幕反馈必须继续工作。
+
 ## 启动无头宿主
 
 ```powershell
@@ -63,6 +69,9 @@ cargo run -- --port 8420
 - [实施路线](docs/ROADMAP.md)
 - [关键决策](docs/DECISIONS.md)
 - [Linux/ARM64 适配路线](docs/LINUX_ARM64.md)
+- [RADIAN MODEL 1 套件路线](docs/PROTOTYPE_KIT.md)
+- [通用导轨机械接口](docs/MECHANICAL_INTERFACE.md)
+- [传感器候选与实测计划](docs/SENSOR_OPTIONS.md)
 - [DeviceEvent v0.1 Schema](schemas/device-event.v0.1.schema.json)
 - [OutputCue v0.1 Schema](schemas/output-cue.v0.1.schema.json)
 

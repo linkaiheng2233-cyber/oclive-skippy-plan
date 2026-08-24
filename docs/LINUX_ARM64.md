@@ -6,6 +6,17 @@
 
 当前标准入口已直接依赖 `oclive_kernel_host`，不再经过 `oclivenewnew-tauri`。最终板载进程不需要 Tauri、WebView、X11、Wayland 或桌面环境。
 
+本项目采用主云端算力。这里的「云端」指 LLM 推理端点，不代表板子是哑终端：DeviceEvent、器灵状态机、即时屏幕反馈、超时取消、断网降级、自启动和 watchdog 都必须在板端。
+
+| 板端保留 | 云端承担 |
+|----------|----------|
+| 传感器采集与滤波 | LLM 重推理 |
+| DeviceEvent 与状态机 | 动态角色短回复 |
+| 轻量 OCLive Host / 云端网关 | 后续可选的重型能力，不进入 v0.1 |
+| PNG/HUD 渲染与屏幕驱动 | — |
+| 本地确定性反馈与断网降级 | — |
+| 日志、systemd、watchdog | — |
+
 ## 适配面
 
 | 层 | Windows 开发期 | Linux/ARM64 实机 |
@@ -66,8 +77,10 @@ app
 ### L4：真实开发板 bring-up
 
 - 使用 64 位精简 Linux 发行版。
+- 开发板、屏幕和传感器先以松散桌面套件连接，不安装到 RADIAN。
 - 先接一个确定性按钮/霍尔开关，再接 IMU。
 - 先点亮屏幕并显示静态图，再接 VisualCue。
+- 接通 Wi-Fi/手机热点与云端 LLM，验证超时、重连和断网本地降级。
 - 验证 udev 权限、systemd、自启动、重启和断网降级。
 
 ### L5：实机稳定性
@@ -86,5 +99,6 @@ app
 5. IMU 产生 `picked_up` / `raised`。
 6. 接入 OCLive `visual_state_id`。
 7. 加 systemd/udev/watchdog 并做两小时 soak。
+8. 套件通过后才开始 RADIAN MODEL 1 外壳与导轨适配。
 
 语音、触觉、BLE、相机和电池优化不与这条路线并行开发。
