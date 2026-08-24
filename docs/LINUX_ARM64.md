@@ -22,7 +22,7 @@
 | 层 | Windows 开发期 | Linux/ARM64 实机 |
 |----|----------------|------------------|
 | 传感器输入 | 键盘、事件文件、mock source | `/dev/i2c-*`、`/dev/gpiochip*`、必要时 `/dev/spidev*` |
-| 屏幕输出 | 普通模拟器窗口 | SPI 屏直驱，或按屏幕接口选择 DRM/KMS/framebuffer |
+| 屏幕输出 | 320 × 240 普通模拟器窗口/文件 sink | 4-wire SPI 直驱为首选；可选通用 MIPI-DBI DRM/KMS |
 | OCLive | 本机 headless host | 同一 `oclive_kernel_host` ARM64 构建 |
 | 配置/日志 | 本地目录 | `/etc/oclive-spirit`、持久数据目录和 journald |
 | 生命周期 | 手动启动 | systemd、自启动、重启、watchdog |
@@ -78,6 +78,7 @@ app
 
 - 使用 64 位精简 Linux 发行版。
 - 开发板、屏幕和传感器先以松散桌面套件连接，不安装到 RADIAN。
+- 首选样屏与冻结门见 `DISPLAY_SELECTION.md`；先按 320 × 240 RGB565 和 4-wire SPI 点屏，不安装桌面环境。
 - 先接一个确定性按钮，再接 IMU 和 BLE Central。
 - 先点亮屏幕并显示静态图，再接 VisualCue。
 - 接通 Wi-Fi/手机热点与云端 LLM，验证超时、重连和断网本地降级。
@@ -92,14 +93,15 @@ app
 
 ## 首轮硬件顺序
 
-1. Linux ARM64 开机并运行 headless host。
-2. 屏幕显示固定 PNG。
-3. mock DeviceEvent 改变屏幕状态。
-4. 物理按钮与 IMU 产生 SensorObservation，再由融合层产生 DeviceEvent。
-5. Grip Node 经 BLE 接入，验证配对、断连未知态和重连状态快照。
-6. 无磁性底座时，握持释放 + 持续静止可以进入待机。
-7. 接入 OCLive `visual_state_id`。
-8. 加 systemd/udev/watchdog 并做两小时 soak。
-9. 套件通过后才开始 RADIAN MODEL 1 外壳与导轨适配。
+1. Windows/mock 按 320 × 240 验证全部核心表情与 HUD。
+2. Linux ARM64 开机并运行 headless host。
+3. 2.8 英寸候选屏通过 SPI 显示固定 PNG，并记录首帧、全帧和局部刷新延迟。
+4. mock DeviceEvent 改变屏幕状态。
+5. 物理按钮与 IMU 产生 SensorObservation，再由融合层产生 DeviceEvent。
+6. Grip Node 经 BLE 接入，验证配对、断连未知态和重连状态快照。
+7. 无磁性底座时，握持释放 + 持续静止可以进入待机。
+8. 接入 OCLive `visual_state_id`。
+9. 加 systemd/udev/watchdog 并做两小时 soak。
+10. 样屏、显示背板和功耗通过后才冻结屏幕舱，再开始 RADIAN MODEL 1 导轨适配。
 
 语音、触觉和相机不与这条路线并行开发。Grip Node 的 BLE/CR2032 与屏幕后置主机电池都属于 S4，但主机电芯只能在屏亮/屏灭、Wi-Fi、BLE 和云端回合功耗实测后选择。
