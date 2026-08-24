@@ -5,7 +5,7 @@
 - 首台原型载体：森柏龙 RADIAN MODEL 1。
 - 开发顺序：独立桌面套件 → 套件外壳 → 导轨适配 → 断电上枪检查 → 通电静态测试 → 场地 Alpha。
 - v0.1 不接载体内部火控、扳机、供弹或其它机构。
-- 传感器默认不走机内线；优先放在导轨主模块内，外部节点使用表面安装或 BLE。
+- 传感器默认不走机内线；导轨主模块保留 IMU/霍尔，远端节点使用表面安装和 BLE，自身完成滤波与低频观察输出。
 - 套件电子核心不为 RADIAN 定制，RADIAN 只作为第一套实物适配与验证载体。
 - 开发板尺寸不是主要矛盾；首轮优先保证 Linux 支持、屏幕接口、GPIO/I2C/SPI、Wi-Fi 和稳定供电。
 - LLM 重推理走云端，物理状态与屏幕即时反馈留在本地。
@@ -19,20 +19,24 @@
 | IMU | `picked_up` / `raised`，可试验震动特征 | 主模块内置或同壳短排线 |
 | 霍尔传感器 + 外部磁体 | `put_down` / 离架检测 | 传感器在主模块，磁体在放置点 |
 | 物理按钮 | 确定性 `triggered` 测试 | 主模块测试键，不接载体内部机构 |
+| BLE Central | 接收功能节点 `SensorObservation` | 开发板板载蓝牙或 USB BLE 适配器 |
+| Grip Node | 压力判断 `grip.engaged/released` | 带天线 BLE 模块 + 薄膜压力片，先桌面供电 |
 | USB 电源 | 排除电池变量 | 桌面供电 |
 | Wi-Fi/手机热点 | 云端 LLM | 开发网络 |
 
-首轮不采购扬声器、功放、振动马达、相机、BLE 贴片和定制电池。
+首轮不采购扬声器、功放、振动马达、相机、Shoulder Node 和定制电池。Grip Node 先用开发模块验证，无线协议通过后再选小电池。
 
 ## 3. 板端与云端分工
 
 ```text
 板端
-  sensors → DeviceEvent → state machine → immediate VisualCue → screen
-                          │
-                          └→ OCLive Fast turn → remote LLM endpoint
-                                                   │
-                                                   └→ dynamic visual state
+  local / BLE sensors → SensorObservation → fusion → DeviceEvent
+                                                    │
+                                                    ├→ state machine → immediate VisualCue → screen
+                                                    │
+                                                    └→ OCLive Fast turn → remote LLM endpoint
+                                                                             │
+                                                                             └→ dynamic visual state
 ```
 
 板端必须在无网时完成：
@@ -57,11 +61,11 @@
 
 ### K2：传感器桌面闭环
 
-依次接按钮/霍尔、IMU；驱动层生成与模拟器完全相同的 DeviceEvent。完成两小时 soak 和断网/重启测试。
+依次接按钮/霍尔、IMU；驱动层先生成 SensorObservation，融合层再生成与模拟器完全相同的 DeviceEvent。随后接入一个桌面供电的 Grip Node，完成 BLE 配对、重连、断连未知态、两小时 soak 和断网/重启测试。
 
 ### K3：独立套件外壳
 
-为板子、屏幕和接口做桌面/手持保护外壳。先解决散热、接插件、检修和固定，不设计 RADIAN 专用外形。
+为板子、屏幕和接口做桌面/手持保护外壳，并把 Grip Node 改成小电池供电。先解决散热、天线净空、压力传递、接插件、检修和固定，不设计 RADIAN 专用外形。
 
 ### K4：RADIAN 安装适配
 
@@ -69,7 +73,7 @@
 
 ### K5：场地 Alpha
 
-完成误触、漏触、屏幕强光、连接稳定性和操控影响记录。只有通过后才评估电池、贴片化和更多传感器。
+完成误触、漏触、屏幕强光、Grip Node 连接/续航和操控影响记录。只有通过后才评估 Shoulder Node 和更多传感器。
 
 ## 5. RADIAN 实物测量清单
 
@@ -81,7 +85,7 @@
 - 套件允许的最大长、宽、高与目标重量。
 - 屏幕收起/展开视角。
 - 开发板与屏幕是一体还是分体更协调。
-- 线缆最短路径、固定点和快速拆卸方式。
+- 主模块内部线缆最短路径、Grip Node 表面固定点和快速拆卸方式。
 - 套件安装前后的重心变化。
 
 测量完成前不冻结外壳、铰链、电池和导轨夹具。
@@ -95,6 +99,7 @@
 - 云端超时/重连不会卡死状态机。
 - 实际屏幕连续刷新两小时无花屏、冻结或资源泄漏。
 - 按钮/霍尔和 IMU 不产生事件风暴。
+- Grip Node 断连不会把最后一次握持状态永久保留，重连后可恢复当前状态快照。
 - systemd 自启动与异常重启可恢复。
 - 套件可以脱离 RADIAN 独立演示完整闭环。
 

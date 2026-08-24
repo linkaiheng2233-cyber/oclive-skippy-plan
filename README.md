@@ -6,7 +6,7 @@
 
 首台原型载体固定为 **森柏龙 RADIAN MODEL 1**。实施顺序是桌面套件 → 套件外壳/导轨适配 → 上枪验证，不在软件和电子闭环完成前修改或连接载体内部机构。
 
-套件机械目标是「一套电子核心 + 可更换安装底座」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，首轮从主模块内置传感器开始。
+套件机械目标是「一套电子核心 + 可更换安装底座」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，导轨主机使用内置 IMU/霍尔，握把等远端感知使用可拆卸 BLE 功能节点。
 
 ## 项目分层
 
@@ -22,8 +22,10 @@
 
 ```text
 模拟/实体传感器
-  → 驱动层滤波、去抖、边沿检测
-  → 低频语义 DeviceEvent
+  → 节点/驱动层滤波、去抖、边沿检测
+  → 低频 SensorObservation
+  → 导轨主机多传感器融合
+  → 语义 DeviceEvent
   → 器灵状态机与即时反馈
   → 必要时触发 OCLive Fast 回合
   → 屏幕表情与 HUD 状态
@@ -34,10 +36,11 @@ v0.1 只包含：
 - 一个角色：AN94。
 - 两种模式：把玩、射击。
 - 四个核心动作：拿起、举起、触发、放回。
+- 一套状态证据：Grip Node 判断握持，主机 IMU 判断举起，霍尔判断在架/离架。
 - PNG 表情与极简 HUD。
 - 断网时仍完整可用的本地屏幕反馈。
 
-ASR、TTS、扬声器、预渲染音频、触觉输出、相机、AI 视觉、心率、精确弹药计数、Live2D、多个 BLE 贴片和手机本地模型均在 MVP 之后评审。
+ASR、TTS、扬声器、预渲染音频、触觉输出、相机、AI 视觉、心率、精确弹药计数、Live2D、第二个及更多 BLE 功能节点和手机本地模型均在 MVP 之后评审。
 
 ## 当前骨架
 
@@ -72,6 +75,8 @@ cargo run -- --port 8420
 - [RADIAN MODEL 1 套件路线](docs/PROTOTYPE_KIT.md)
 - [通用导轨机械接口](docs/MECHANICAL_INTERFACE.md)
 - [传感器候选与实测计划](docs/SENSOR_OPTIONS.md)
+- [BLE 无线功能传感器网络](docs/WIRELESS_SENSOR_NETWORK.md)
+- [SensorObservation v0.1 Schema](schemas/sensor-observation.v0.1.schema.json)
 - [DeviceEvent v0.1 Schema](schemas/device-event.v0.1.schema.json)
 - [OutputCue v0.1 Schema](schemas/output-cue.v0.1.schema.json)
 

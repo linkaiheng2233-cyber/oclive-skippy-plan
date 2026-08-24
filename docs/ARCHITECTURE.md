@@ -6,10 +6,15 @@
 
 ```text
 Raw sensors
-  │  GPIO / I2C / SPI / mock input
+  │  GPIO / ADC / I2C / SPI / mock input
   ▼
-Driver adapters
+Node / driver adapters
   │  filter / debounce / edge / aggregate
+  ▼
+SensorObservation v0.1
+  │  BLE GATT or local adapter
+  ▼
+Rail-core sensor fusion
   ▼
 DeviceEvent v0.1
   ▼
@@ -39,7 +44,9 @@ Sleeping → Held → Ready → Active
 
 ## 3. 输入边界
 
-`schemas/device-event.v0.1.schema.json` 只描述语义 DeviceEvent。原始 IMU 采样、压力曲线、按钮抖动和心率波形不得进入该协议。
+`schemas/sensor-observation.v0.1.schema.json` 描述单个物理节点已经滤波的低频事实，例如 `grip.engaged`、`motion.raised` 或 `dock.entered`。它可以来自 BLE 节点，也可以来自主机内置传感器，但不直接驱动角色。
+
+`schemas/device-event.v0.1.schema.json` 只描述导轨主机融合后的语义 DeviceEvent。原始 IMU 采样、压力曲线、按钮抖动和心率波形不得进入这两个协议。节点断连时相关事实必须变为 `unknown`，不得无限沿用最后一次握持状态。
 
 进入 OCLive 的传感器回合必须具备类型化来源：
 
@@ -70,7 +77,8 @@ sensor 的默认副作用策略：
 
 本仓：
 
-- DeviceEvent 与 Visual OutputCue schema。
+- SensorObservation、DeviceEvent 与 Visual OutputCue schema。
+- BLE 功能节点配对、状态同步和主机侧多传感器融合。
 - 器灵状态机和屏幕状态仲裁。
 - 桌面模拟器与事件回放。
 - ARM Linux 服务、GPIO/IMU 与屏幕适配。
