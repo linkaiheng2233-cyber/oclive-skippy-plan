@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-器灵层把连续、嘈杂的物理信号转换成低频语义事件，再把即时确定性反馈和较慢的角色生成安全地组合起来。它不是第二套 OCLive 编排器，也不是硬件驱动集合的别名。
+器灵层把连续、嘈杂的物理信号转换成低频语义事件，再把即时确定性屏幕反馈和较慢的角色生成安全地组合起来。它不是第二套 OCLive 编排器，也不是硬件驱动集合的别名。
 
 ```text
 Raw sensors
@@ -13,7 +13,7 @@ Driver adapters
   ▼
 DeviceEvent v0.1
   ▼
-Spirit state machine ────────→ immediate VisualCue / HapticCue / cached AudioCue
+Spirit state machine ────────→ immediate VisualCue
   │
   └─ low-frequency trigger ─→ OCLive turn ─→ dynamic role expression
                                       │
@@ -59,22 +59,21 @@ sensor 的默认副作用策略：
 
 ## 4. 输出边界
 
-`schemas/output-cue.v0.1.schema.json` 定义 Visual、Audio、Haptic 三类输出信封。输出仲裁按以下顺序决定执行：
+`schemas/output-cue.v0.1.schema.json` 只定义 VisualCue。语音与触觉不进入 v0.1，避免在传感器—屏幕闭环完成前扩张输出栈。屏幕状态仲裁按以下顺序决定执行：
 
 1. 丢弃已经超过 `ttl_ms` 的迟到输出。
-2. 高优先级可以打断低优先级。
-3. 射击模式过滤非明确放行的 AudioCue。
-4. 即时本地反馈先执行；动态回复到达后只能接管仍然有效的槽位。
-5. 网络失败不回滚已经完成的设备状态转换。
+2. 高优先级视觉状态可以打断低优先级。
+3. 即时本地反馈先执行；动态回复到达后只能接管仍然有效的屏幕槽位。
+4. 网络失败不回滚已经完成的设备状态转换。
 
 ## 5. 仓库分工
 
 本仓：
 
-- DeviceEvent 与 OutputCue schema。
-- 器灵状态机和输出仲裁。
+- DeviceEvent 与 Visual OutputCue schema。
+- 器灵状态机和屏幕状态仲裁。
 - 桌面模拟器与事件回放。
-- ARM Linux 服务、GPIO/IMU/屏幕/音频/触觉适配。
+- ARM Linux 服务、GPIO/IMU 与屏幕适配。
 - systemd、日志导出、实机基准和结构文件。
 
 OCLive 主仓：

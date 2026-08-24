@@ -1,6 +1,6 @@
 # OCLive 四季宝器灵
 
-**Skippy Spirit** 是 OCLive 的第一个实体角色宿主：把角色包、记忆、情绪和场景编排接入物理事件，让设备能感知用户拿起、举起、触发和放回，并通过表情、震动或一句话作出符合人格的回应。
+**Skippy Spirit** 是 OCLive 的第一个实体角色宿主：把角色包、记忆、情绪和场景编排接入物理事件，让设备能感知用户拿起、举起、触发和放回，并通过小屏表情与状态作出符合人格的回应。
 
 当前状态：**仓库与无头内核骨架已建立；硬件尚未启动。下一里程碑是器灵模拟器与类型化输入来源契约。**
 
@@ -9,8 +9,8 @@
 | 层 | 职责 | 所在位置 |
 |----|------|----------|
 | OCLive Core | 人格、记忆、情绪、场景、角色包与回合编排 | 兄弟仓 `../oclivenewnew` |
-| Spirit Runtime | DeviceEvent、状态机、触发策略、输出仲裁与离线兜底 | 本仓 |
-| Skippy Host | wargame 实体配件、ARM Linux、传感器、小屏与触觉适配 | 本仓后续阶段 |
+| Spirit Runtime | DeviceEvent、状态机、触发策略、屏幕状态仲裁与离线兜底 | 本仓 |
+| Skippy Host | wargame 实体配件、ARM Linux、传感器与小屏适配 | 本仓后续阶段 |
 
 本项目不做智能火控、弹道计算、自动瞄准、武器控制或军警用途。v0.1 只验证「器灵是否真的活了」。
 
@@ -22,7 +22,7 @@
   → 低频语义 DeviceEvent
   → 器灵状态机与即时反馈
   → 必要时触发 OCLive Fast 回合
-  → visual / audio / haptic 输出仲裁
+  → 屏幕表情与 HUD 状态
 ```
 
 v0.1 只包含：
@@ -30,14 +30,14 @@ v0.1 只包含：
 - 一个角色：AN94。
 - 两种模式：把玩、射击。
 - 四个核心动作：拿起、举起、触发、放回。
-- PNG 表情、极简 HUD、预渲染语音和振动反馈。
-- 断网时仍完整可用的本地即时反馈。
+- PNG 表情与极简 HUD。
+- 断网时仍完整可用的本地屏幕反馈。
 
-相机、AI 视觉、心率、精确弹药计数、Live2D、多个 BLE 贴片和手机本地模型均在 MVP 之后评审。
+ASR、TTS、扬声器、预渲染音频、触觉输出、相机、AI 视觉、心率、精确弹药计数、Live2D、多个 BLE 贴片和手机本地模型均在 MVP 之后评审。
 
 ## 当前骨架
 
-本仓由 OCLive `robot-soul` 工厂模板生成：
+本仓由 OCLive `robot-soul` 工厂模板生成，并已将生成器默认的桌面 Tauri 依赖替换为 `oclive_kernel_host` 纯无头依赖：
 
 - `src/main.rs`：标准无头 OCLive HTTP 宿主。
 - `src/main_monolith.rs`：Monolith 焊接入口。
@@ -62,6 +62,7 @@ cargo run -- --port 8420
 - [架构边界](docs/ARCHITECTURE.md)
 - [实施路线](docs/ROADMAP.md)
 - [关键决策](docs/DECISIONS.md)
+- [Linux/ARM64 适配路线](docs/LINUX_ARM64.md)
 - [DeviceEvent v0.1 Schema](schemas/device-event.v0.1.schema.json)
 - [OutputCue v0.1 Schema](schemas/output-cue.v0.1.schema.json)
 

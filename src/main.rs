@@ -1,6 +1,7 @@
 //! `oclive-skippy-spirit` — oclive-cli 生成的内核入口。
 //!
-//! 已接入 **oclivenewnew**（`--kernel-source`）：与 `oclive-kernel-server` 相同的无头 HTTP API。
+//! 直接接入 **oclive_kernel_host**：与 `oclive-kernel-server` 相同的纯无头 HTTP API，
+//! 不引入 Tauri / WebView，便于后续 Linux ARM64 部署。
 //! 高耦合构建使用独立入口 **`src/main_monolith.rs`**（`oclive-skippy-spirit-monolith` 二进制），见 `Cargo.toml` 中 `[[bin]]`。
 
 fn kernel_bench_iterations() -> u32 {
@@ -13,7 +14,7 @@ fn kernel_bench_iterations() -> u32 {
 }
 
 fn main() {
-    let _ = oclivenewnew_tauri::init_tracing();
+    let _log_guard = oclive_kernel_host::init_tracing();
     let bench_iters = kernel_bench_iterations();
     if bench_iters > 0 {
         for _ in 0..bench_iters {
@@ -49,5 +50,5 @@ fn main() {
         port,
         "starting headless HTTP API"
     );
-    oclivenewnew_tauri::run_api_server(port);
+    oclive_kernel_host::run_api_server(port);
 }

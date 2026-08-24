@@ -7,11 +7,12 @@ authors = ["supermumu"]
 license = "MIT"
 description = "OCLive 四季宝器灵实体角色宿主与模拟器"
 
-# 已接入 oclivenewnew 工作区（`oclive init --kernel-source`）。
+# 直接依赖 OCLive 的纯 headless host；硬件发行版不引入 Tauri/WebView。
 [dependencies]
-oclivenewnew-tauri = { path = "../oclivenewnew/distros/desktop-tauri" }
+oclive_kernel_host = { path = "../oclivenewnew/kernel/crates/oclive_kernel_host" }
 oclive_kernel_runtime = { path = "../oclivenewnew/kernel/crates/oclive_kernel_runtime" }
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 oclive_monolith_builtin = { path = "vendor/oclive_monolith_builtin" }
 
 [features]
