@@ -30,12 +30,12 @@ Spirit state machine ────────→ immediate VisualCue
 v0.1 状态闭集：
 
 ```text
-Sleeping → Held → Ready → Active
-    ▲        │       │       │
-    └────────┴───────┴───────┘  device.put_down / timeout
+Sleeping/Standby → Held → Ready → Active
+       ▲             │       │       │
+       └─────────────┴───────┴───────┘  grip released + motion idle timeout
 ```
 
-- `Sleeping`：设备放置或长期静止，屏幕关闭/低亮。
+- `Sleeping/Standby`：握持释放并持续静止，屏幕关闭/低亮；不要求放回固定底座。
 - `Held`：设备被拿起，允许一次唤醒反馈。
 - `Ready`：设备被举起或进入准备姿态。
 - `Active`：收到触发事件；射击模式保持静默。
@@ -44,7 +44,7 @@ Sleeping → Held → Ready → Active
 
 ## 3. 输入边界
 
-`schemas/sensor-observation.v0.1.schema.json` 描述单个物理节点已经滤波的低频事实，例如 `grip.engaged`、`motion.raised` 或 `dock.entered`。它可以来自 BLE 节点，也可以来自主机内置传感器，但不直接驱动角色。
+`schemas/sensor-observation.v0.1.schema.json` 描述单个物理节点已经滤波的低频事实，例如 `grip.engaged`、`motion.moving` 或 `motion.idle`。它可以来自 BLE 节点，也可以来自主机内置传感器，但不直接驱动角色。
 
 `schemas/device-event.v0.1.schema.json` 只描述导轨主机融合后的语义 DeviceEvent。原始 IMU 采样、压力曲线、按钮抖动和心率波形不得进入这两个协议。节点断连时相关事实必须变为 `unknown`，不得无限沿用最后一次握持状态。
 

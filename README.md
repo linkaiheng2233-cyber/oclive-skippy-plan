@@ -6,7 +6,7 @@
 
 首台原型载体固定为 **森柏龙 RADIAN MODEL 1**。实施顺序是桌面套件 → 套件外壳/导轨适配 → 上枪验证，不在软件和电子闭环完成前修改或连接载体内部机构。
 
-套件机械目标是「一套电子核心 + 可更换安装底座」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，导轨主机使用内置 IMU/霍尔，握把等远端感知使用可拆卸 BLE 功能节点。
+套件机械目标是「一套电子核心 + 可更换导轨安装件」：首发覆盖带标准皮卡汀尼导轨的 wargame 载体，其它安装标准通过独立转接件扩展。传感器默认不走机内线，导轨主机使用内置 IMU，握把等远端感知使用可拆卸 BLE 功能节点；状态判断不依赖磁性放置底座。
 
 ## 项目分层
 
@@ -36,7 +36,7 @@ v0.1 只包含：
 - 一个角色：AN94。
 - 两种模式：把玩、射击。
 - 四个核心动作：拿起、举起、触发、放回。
-- 一套状态证据：Grip Node 判断握持，主机 IMU 判断举起，霍尔判断在架/离架。
+- 一套状态证据：Grip Node 判断握持，主机 IMU 判断移动、静止与举起；握持释放 + 持续静止进入待机。
 - PNG 表情与极简 HUD。
 - 断网时仍完整可用的本地屏幕反馈。
 
@@ -76,6 +76,7 @@ cargo run -- --port 8420
 - [通用导轨机械接口](docs/MECHANICAL_INTERFACE.md)
 - [传感器候选与实测计划](docs/SENSOR_OPTIONS.md)
 - [BLE 无线功能传感器网络](docs/WIRELESS_SENSOR_NETWORK.md)
+- [无线节点电池与功耗预算](docs/POWER_BUDGET.md)
 - [SensorObservation v0.1 Schema](schemas/sensor-observation.v0.1.schema.json)
 - [DeviceEvent v0.1 Schema](schemas/device-event.v0.1.schema.json)
 - [OutputCue v0.1 Schema](schemas/output-cue.v0.1.schema.json)

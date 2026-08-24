@@ -39,11 +39,10 @@
         "grip.released",
         "shoulder.engaged",
         "shoulder.released",
+        "motion.moving",
         "motion.raised",
         "motion.lowered",
         "motion.idle",
-        "dock.entered",
-        "dock.exited",
         "trigger.test",
         "impact.estimated",
         "node.status"
@@ -65,5 +64,63 @@
     "payload": {
       "type": "object"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "observation_type": {
+            "const": "node.status"
+          }
+        },
+        "required": [
+          "observation_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "power_source",
+              "battery_state"
+            ],
+            "properties": {
+              "power_source": {
+                "enum": [
+                  "bench",
+                  "cr2032",
+                  "cr1632",
+                  "other"
+                ]
+              },
+              "battery_mv": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5000
+              },
+              "battery_state": {
+                "enum": [
+                  "normal",
+                  "low",
+                  "critical",
+                  "unknown",
+                  "not_applicable"
+                ]
+              },
+              "firmware_version": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "calibration_version": {
+                "type": "string",
+                "maxLength": 64
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  ]
 }

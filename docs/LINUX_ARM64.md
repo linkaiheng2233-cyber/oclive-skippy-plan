@@ -78,7 +78,7 @@ app
 
 - 使用 64 位精简 Linux 发行版。
 - 开发板、屏幕和传感器先以松散桌面套件连接，不安装到 RADIAN。
-- 先接一个确定性按钮/霍尔开关，再接 IMU。
+- 先接一个确定性按钮，再接 IMU 和 BLE Central。
 - 先点亮屏幕并显示静态图，再接 VisualCue。
 - 接通 Wi-Fi/手机热点与云端 LLM，验证超时、重连和断网本地降级。
 - 验证 udev 权限、systemd、自启动、重启和断网降级。
@@ -95,10 +95,11 @@ app
 1. Linux ARM64 开机并运行 headless host。
 2. 屏幕显示固定 PNG。
 3. mock DeviceEvent 改变屏幕状态。
-4. 物理按钮/霍尔开关产生 DeviceEvent。
-5. IMU 产生 `picked_up` / `raised`。
-6. 接入 OCLive `visual_state_id`。
-7. 加 systemd/udev/watchdog 并做两小时 soak。
-8. 套件通过后才开始 RADIAN MODEL 1 外壳与导轨适配。
+4. 物理按钮与 IMU 产生 SensorObservation，再由融合层产生 DeviceEvent。
+5. Grip Node 经 BLE 接入，验证配对、断连未知态和重连状态快照。
+6. 无磁性底座时，握持释放 + 持续静止可以进入待机。
+7. 接入 OCLive `visual_state_id`。
+8. 加 systemd/udev/watchdog 并做两小时 soak。
+9. 套件通过后才开始 RADIAN MODEL 1 外壳与导轨适配。
 
-语音、触觉、BLE、相机和电池优化不与这条路线并行开发。
+语音、触觉、相机和主机电池优化不与这条路线并行开发。一个 Grip Node 的 BLE 与 CR2032 功耗验证属于当前传感器主链。

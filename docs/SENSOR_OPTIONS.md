@@ -12,7 +12,6 @@
 | 方案 | 可感知 | 走线 | 优点 | 主要问题 | 阶段 |
 |------|--------|------|------|----------|------|
 | 主模块内置 6 轴 IMU | 拿起、举起、姿态、晃动、震动估计 | 无 | 最通用、零额外节点 | 无法确认握持/抵肩；震动事件可能误判 | v0.1 必做 |
-| 主模块内置霍尔 + 放置点磁体 | 在架/离架、放回 | 无机内线 | 确定性强、便宜、低功耗 | 需要在放置点布置磁体 | v0.1 必做 |
 | 主模块物理按钮 | 模式/测试触发 | 无 | 最确定，方便调试 | 不代表真实机械事件 | v0.1 必做 |
 | 主模块接触式压电/震动传感器 | 震动/冲击特征 | 无远端线 | 可补充 IMU 高频震动 | 环境震动、不同载体差异大 | v0.2 试验 |
 | 外部表面 FSR/电容贴片 | 握持、压力、接触 | 外部短线 | 数据直观、无节点电池 | 理线、耐用性、不同握持习惯 | 仅台架调试 |
@@ -24,23 +23,21 @@
 ```text
 主模块
   ├── 6-axis IMU
-  ├── Hall sensor
   ├── physical test/mode button
   └── BLE Central
 
 外部
-  ├── Grip Node: pressure film + BLE MCU
-  └── rack/dock magnet（非电子节点）
+  └── Grip Node: pressure film + BLE MCU + replaceable CR2032
 ```
 
-这组组合可以在没有任何机内线或远端传感器电池的情况下完成：
+这组组合不需要机内线、固定放置点或磁性底座：
 
-- 磁体状态变化 → `device.picked_up` / `device.put_down`。
-- Grip Node 压力状态 → `grip.engaged/released`，与 IMU/霍尔共同判断 Held/Ready。
-- IMU 姿态与运动窗口 → `device.raised`。
+- Grip Node 压力状态 → `grip.engaged/released`，与 IMU 共同判断 Held/Ready。
+- IMU 移动、静止、姿态窗口 → `device.picked_up` / `device.raised`。
+- grip released + motion idle 超时 → `device.put_down` / Standby。
 - 物理测试键 → `device.triggered`，仅用于打通软件与屏幕路线。
 
-`device.triggered` 在 v0.1 不宣称是真实击发检测。等主模块上 RADIAN 后，先采集 IMU/震动数据，再决定压电或专用信号是否值得加入。握持精度来自压力 + 运动 + 在架状态融合，而不是把单点压力当作绝对真相。
+`device.triggered` 在 v0.1 不宣称是真实击发检测。等主模块上 RADIAN 后，先采集 IMU/震动数据，再决定压电或专用信号是否值得加入。握持精度来自压力 + 运动状态融合，而不是把单点压力当作绝对真相。
 
 ## 4. 外部传感器路线比较
 
@@ -53,6 +50,8 @@
 这是通用套件的默认远端路线。v0.1 只实现一个可移动 Grip Node；握持节点通过后，才复用同一协议开发 Shoulder Node。每个节点必须具备供电、配对、断线重连、低电量提示、校准版本和固件维护能力。
 
 Grip Node 首选薄膜压力而不是只用电容：压力对手套和握把材料更稳健，但需要模拟调理、迟滞、力集中结构和逐节点校准。详细拓扑、状态融合与尺寸预算见 `WIRELESS_SENSOR_NETWORK.md`。
+
+下场电池默认使用可更换 CR2032，CR1632 只作为紧凑备选。节点不依赖磁吸充电，不在握把受力区放置软包锂电；详细功耗与续航验收见 `POWER_BUDGET.md`。
 
 ### 内部专用信号
 
@@ -75,7 +74,7 @@ Grip Node 首选薄膜压力而不是只用电容：压力对手套和握把材�
 
 ## 6. 决策门
 
-- v0.1：主机 IMU + 霍尔 + 按钮 + BLE Central，以及一个压力式 Grip Node。
+- v0.1：主机 IMU + 按钮 + BLE Central，以及一个 CR2032 供电的压力式 Grip Node。
 - 握持判断：先做有线桌面采样和受力结构，再切换 BLE；上枪形态不保留外部数据线。
 - 桌面套件通过后：比较 IMU 单独与 IMU + 压电的触发特征。
 - Grip Node 通过后：决定是否需要独立 Shoulder Node，不默认增加第二节点。
