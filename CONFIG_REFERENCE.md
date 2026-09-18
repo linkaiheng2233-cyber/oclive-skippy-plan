@@ -1,6 +1,6 @@
 # oclive-cli 生成项目：`plugin_backends` 预设对照
 
-本文件由 **`oclive-cli init`** 自动生成，与 `init --help` 中的预设矩阵一致。正式契约以主仓 **[PLUGIN_V1.md](../../../creator-docs/plugin-and-architecture/PLUGIN_V1.md)** 与 **`src-tauri/src/models/plugin_backends.rs`** 为准；权威说明见 **[SETTINGS_REFERENCE.md](../../../creator-docs/cli/SETTINGS_REFERENCE.md)**。
+本文件由 **`oclive-cli init`** 自动生成，与 `init --help` 中的预设矩阵一致。正式契约以主仓 **[PLUGIN_V1.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/plugin-and-architecture/PLUGIN_V1.md)** 与 **`src-tauri/src/models/plugin_backends.rs`** 为准；权威说明见 **[SETTINGS_REFERENCE.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/cli/SETTINGS_REFERENCE.md)**。
 
 ## 内核工厂模板（`--template`）
 
@@ -24,7 +24,7 @@
 | `memory` | memory, prompt, llm |
 | `embedded` | emotion, memory, llm |
 
-愿景说明：[KERNEL_FACTORY_VISION.md](../../../creator-docs/getting-started/KERNEL_FACTORY_VISION.md)
+愿景说明：[KERNEL_FACTORY_VISION.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/getting-started/KERNEL_FACTORY_VISION.md)
 
 生成工程含 **`docs/BLUEPRINT_V2_POINTER.md`**、**`docs/WELD_BENCH_REPORT.md`**（中英焊接对比报告模板），以及 **`plugins/README.md`**。
 
@@ -37,7 +37,7 @@
 
 **插件脚手架**（仓库根）：`cargo run -p oclive-cli -- plugin create <name> --type directory|remote --provides <slot> …`
 
-**平台扩展**：`registry` · `compose` · `publish` / `init --template-url` · `init --tui` · `bench --watch` · `debug` — 见 [OCLIVE_CLI_GUIDE.md](../../../creator-docs/cli/OCLIVE_CLI_GUIDE.md)。
+**平台扩展**：`registry` · `compose` · `publish` / `init --template-url` · `init --tui` · `bench --watch` · `debug` — 见 [OCLIVE_CLI_GUIDE.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/cli/OCLIVE_CLI_GUIDE.md)。
 
 **`robot-gateway` 模板**额外生成 **`mcp_servers/`** 与 **`roles/gateway/settings.json`**（`agent` = builtin + `agent_mcp` 占位）。
 
@@ -86,7 +86,7 @@
 - **交互**：流程末尾「是否启用开发者编译选项？」→「编译模式」（标准 / 全槽焊接 / 自定义焊接范围）。
 - **再生成**：`cargo run -p oclive-cli -- --experimental build -o ./out`（默认继续两次 `cargo build`；`--no-cargo` 仅写源码与 vendor）。
 - **构建**：亦可手动 `cargo build --release`（标准）、`cargo build --release --features monolith`（焊接产物）。
-- **权威设计**：[RFC_OCLIVE_MONOLITH_MODE.md](../../../creator-docs/rfc/RFC_OCLIVE_MONOLITH_MODE.md)。
+- **权威设计**：[RFC_OCLIVE_MONOLITH_MODE.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/rfc/RFC_OCLIVE_MONOLITH_MODE.md)。
 
 ## `oclive dev`（角色包目录监听）
 
@@ -98,7 +98,7 @@ cargo run -p oclive-cli -- dev -o /path/to/project --roles roles --reload-cmd "e
 cargo run -p oclive-cli -- dev -o /path/to/project --no-watch
 ```
 
-详见主仓 [OCLIVE_CLI_GUIDE.md](../../../creator-docs/cli/OCLIVE_CLI_GUIDE.md)（若与本仓库并列检出）。
+详见主仓 [OCLIVE_CLI_GUIDE.md](https://github.com/linkaiheng2233-cyber/oclivenewnew/blob/main/creator-docs/cli/OCLIVE_CLI_GUIDE.md)。
 
 ## `oclive bench --save` / `--compare`（Monolith 项目）
 
