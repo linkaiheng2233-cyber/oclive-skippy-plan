@@ -76,7 +76,7 @@ ASR、TTS、扬声器、预渲染音频、触觉输出、相机、只读AI视觉
 | 项 | 值 |
 |---|---|
 | **唯一权威** | 本仓（开发机上 `E:\OCLive\oclive-四季宝器灵`） |
-| GitHub 远端 | `origin` = `https://github.com/supermumucoming/oclive-skippy-plan.git`（**公开 / 开源**） |
+| GitHub 远端 | `origin` = `https://github.com/linkaiheng2233-cyber/oclive-skippy-plan.git`（**公开 / 开源**） |
 | 当前基线 | tag `baseline/GS-P0-BL-2026-09-18`，Baseline ID 见 `docs/PROJECT_BASELINE.md` |
 | OCLive 兄弟仓 | `https://github.com/linkaiheng2233-cyber/oclivenewnew.git`（公开；本仓按同级目录路径依赖，clone 时放到同级目录即可） |
 | 大工件 | 仓库外 `E:\OCLive\oclive-四季宝-artifacts\`（镜像、证据包、模型权重不入仓） |
