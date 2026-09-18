@@ -1,0 +1,15 @@
+{
+  "contract_version": "0.2",
+  "observation_id": "obs-invalid-empty-node",
+  "node_uid": "",
+  "boot_id": "front-boot-01",
+  "sequence": 3,
+  "node_monotonic_ms": 1400,
+  "observation": {
+    "kind": "grip_contact",
+    "payload": {
+      "contact": "engaged",
+      "strength_milli": 500
+    }
+  }
+}

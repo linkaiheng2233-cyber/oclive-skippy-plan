@@ -1,0 +1,77 @@
+{
+  "contract_version": "0.2",
+  "host_boot_id": "host-boot-20260828-01",
+  "revision": 12,
+  "produced_at_monotonic_ms": 5200,
+  "carrier_state": {
+    "status": "known",
+    "value": "ready",
+    "observed_at_monotonic_ms": 5150,
+    "fresh_until_monotonic_ms": 5650,
+    "confidence_milli": 910,
+    "source_refs": [
+      {
+        "observation_id": "obs-front-0008",
+        "node_uid": "front-rail-01",
+        "capability": "front_grip",
+        "relation": "supports"
+      },
+      {
+        "observation_id": "obs-rear-0011",
+        "node_uid": "rear-grip-01",
+        "capability": "rear_grip",
+        "relation": "supports"
+      }
+    ]
+  },
+  "front_grip": {
+    "status": "known",
+    "value": "engaged",
+    "observed_at_monotonic_ms": 5100,
+    "fresh_until_monotonic_ms": 5600,
+    "confidence_milli": 880,
+    "source_refs": []
+  },
+  "rear_grip": {
+    "status": "known",
+    "value": "engaged",
+    "observed_at_monotonic_ms": 5110,
+    "fresh_until_monotonic_ms": 5610,
+    "confidence_milli": 930,
+    "source_refs": []
+  },
+  "motion": {
+    "status": "known",
+    "value": "moving",
+    "observed_at_monotonic_ms": 5120,
+    "fresh_until_monotonic_ms": 5620,
+    "confidence_milli": 760,
+    "source_refs": []
+  },
+  "pose": {
+    "status": "known",
+    "value": "raised",
+    "observed_at_monotonic_ms": 5130,
+    "fresh_until_monotonic_ms": 5630,
+    "confidence_milli": 840,
+    "source_refs": []
+  },
+  "primary_control": {
+    "status": "known",
+    "value": "released",
+    "observed_at_monotonic_ms": 5140,
+    "fresh_until_monotonic_ms": 5640,
+    "confidence_milli": 990,
+    "source_refs": []
+  },
+  "node_health": [
+    {
+      "node_uid": "front-rail-01",
+      "state": "healthy"
+    },
+    {
+      "node_uid": "rear-grip-01",
+      "state": "healthy"
+    }
+  ]
+}

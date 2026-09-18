@@ -1,0 +1,8 @@
+{
+  "contract_version": "0.2",
+  "event_id": "event-invalid-baseline",
+  "host_boot_id": "host-boot-01",
+  "occurred_at_monotonic_ms": 0,
+  "caused_by_perception_revision": 0,
+  "kind": "carrier.held_entered"
+}

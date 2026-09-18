@@ -1,0 +1,18 @@
+{
+  "contract_version": "0.2",
+  "host_boot_id": "host-boot-invalid-unknown",
+  "revision": 1,
+  "produced_at_monotonic_ms": 100,
+  "carrier_state": {
+    "status": "unknown",
+    "reason": "node_offline",
+    "since_revision": 1,
+    "value": "ready"
+  },
+  "front_grip": { "status": "unknown", "reason": "node_offline", "since_revision": 1 },
+  "rear_grip": { "status": "unknown", "reason": "node_offline", "since_revision": 1 },
+  "motion": { "status": "unknown", "reason": "node_offline", "since_revision": 1 },
+  "pose": { "status": "unknown", "reason": "node_offline", "since_revision": 1 },
+  "primary_control": { "status": "unknown", "reason": "node_offline", "since_revision": 1 },
+  "node_health": []
+}

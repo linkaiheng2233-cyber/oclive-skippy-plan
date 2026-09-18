@@ -1,0 +1,12 @@
+{
+  "contract_version": "0.2",
+  "observation_id": "obs-invalid-kind",
+  "node_uid": "front-rail-01",
+  "boot_id": "front-boot-01",
+  "sequence": 3,
+  "node_monotonic_ms": 1400,
+  "observation": {
+    "kind": "weapon_fired",
+    "payload": {}
+  }
+}

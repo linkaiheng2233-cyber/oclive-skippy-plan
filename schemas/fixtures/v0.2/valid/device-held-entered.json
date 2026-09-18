@@ -1,0 +1,8 @@
+{
+  "contract_version": "0.2",
+  "event_id": "event-host-0001",
+  "host_boot_id": "host-boot-20260828-01",
+  "occurred_at_monotonic_ms": 5200,
+  "caused_by_perception_revision": 12,
+  "kind": "carrier.held_entered"
+}

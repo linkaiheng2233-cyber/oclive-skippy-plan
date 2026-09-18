@@ -1,0 +1,471 @@
+{
+  "$defs": {
+    "BootId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "Capability": {
+      "enum": [
+        "front_grip",
+        "rear_grip",
+        "motion",
+        "orientation",
+        "primary_control",
+        "shock_diagnostic"
+      ],
+      "type": "string"
+    },
+    "CarrierState": {
+      "enum": [
+        "standby",
+        "held",
+        "ready"
+      ],
+      "type": "string"
+    },
+    "Contact": {
+      "enum": [
+        "engaged",
+        "released"
+      ],
+      "type": "string"
+    },
+    "ContractVersion": {
+      "enum": [
+        "0.2"
+      ],
+      "type": "string"
+    },
+    "EvidenceRelation": {
+      "enum": [
+        "supports",
+        "contradicts"
+      ],
+      "type": "string"
+    },
+    "Fact": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "confidence_milli": {
+              "$ref": "#/$defs/Permille"
+            },
+            "fresh_until_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "observed_at_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_refs": {
+              "items": {
+                "$ref": "#/$defs/SourceRef"
+              },
+              "maxItems": 4,
+              "type": "array"
+            },
+            "status": {
+              "const": "known",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/CarrierState"
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "observed_at_monotonic_ms",
+            "fresh_until_monotonic_ms",
+            "confidence_milli",
+            "source_refs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "$ref": "#/$defs/UnknownReason"
+            },
+            "since_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "const": "unknown",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "since_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Fact2": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "confidence_milli": {
+              "$ref": "#/$defs/Permille"
+            },
+            "fresh_until_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "observed_at_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_refs": {
+              "items": {
+                "$ref": "#/$defs/SourceRef"
+              },
+              "maxItems": 4,
+              "type": "array"
+            },
+            "status": {
+              "const": "known",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Contact"
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "observed_at_monotonic_ms",
+            "fresh_until_monotonic_ms",
+            "confidence_milli",
+            "source_refs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "$ref": "#/$defs/UnknownReason"
+            },
+            "since_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "const": "unknown",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "since_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Fact3": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "confidence_milli": {
+              "$ref": "#/$defs/Permille"
+            },
+            "fresh_until_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "observed_at_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_refs": {
+              "items": {
+                "$ref": "#/$defs/SourceRef"
+              },
+              "maxItems": 4,
+              "type": "array"
+            },
+            "status": {
+              "const": "known",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/MotionClass"
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "observed_at_monotonic_ms",
+            "fresh_until_monotonic_ms",
+            "confidence_milli",
+            "source_refs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "$ref": "#/$defs/UnknownReason"
+            },
+            "since_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "const": "unknown",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "since_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Fact4": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "confidence_milli": {
+              "$ref": "#/$defs/Permille"
+            },
+            "fresh_until_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "observed_at_monotonic_ms": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_refs": {
+              "items": {
+                "$ref": "#/$defs/SourceRef"
+              },
+              "maxItems": 4,
+              "type": "array"
+            },
+            "status": {
+              "const": "known",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Pose"
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "observed_at_monotonic_ms",
+            "fresh_until_monotonic_ms",
+            "confidence_milli",
+            "source_refs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "$ref": "#/$defs/UnknownReason"
+            },
+            "since_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "const": "unknown",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "since_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "MotionClass": {
+      "enum": [
+        "idle",
+        "moving"
+      ],
+      "type": "string"
+    },
+    "NodeHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "node_uid": {
+          "$ref": "#/$defs/NodeUid"
+        },
+        "state": {
+          "$ref": "#/$defs/NodeHealthState"
+        }
+      },
+      "required": [
+        "node_uid",
+        "state"
+      ],
+      "type": "object"
+    },
+    "NodeHealthState": {
+      "enum": [
+        "healthy",
+        "degraded",
+        "offline",
+        "incompatible_protocol",
+        "protocol_fault"
+      ],
+      "type": "string"
+    },
+    "NodeUid": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ObservationId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "Permille": {
+      "format": "uint16",
+      "maximum": 1000,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "Pose": {
+      "enum": [
+        "raised",
+        "lowered"
+      ],
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "capability": {
+          "$ref": "#/$defs/Capability"
+        },
+        "node_uid": {
+          "$ref": "#/$defs/NodeUid"
+        },
+        "observation_id": {
+          "$ref": "#/$defs/ObservationId"
+        },
+        "relation": {
+          "$ref": "#/$defs/EvidenceRelation"
+        }
+      },
+      "required": [
+        "observation_id",
+        "node_uid",
+        "capability",
+        "relation"
+      ],
+      "type": "object"
+    },
+    "UnknownReason": {
+      "enum": [
+        "never_observed",
+        "node_offline",
+        "stale",
+        "uncalibrated",
+        "sensor_fault"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "https://oclive.dev/schemas/ailive.gun-spirit/perception-state.v0.2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "carrier_state": {
+      "$ref": "#/$defs/Fact"
+    },
+    "contract_version": {
+      "$ref": "#/$defs/ContractVersion"
+    },
+    "front_grip": {
+      "$ref": "#/$defs/Fact2"
+    },
+    "host_boot_id": {
+      "$ref": "#/$defs/BootId"
+    },
+    "motion": {
+      "$ref": "#/$defs/Fact3"
+    },
+    "node_health": {
+      "items": {
+        "$ref": "#/$defs/NodeHealth"
+      },
+      "maxItems": 8,
+      "type": "array"
+    },
+    "pose": {
+      "$ref": "#/$defs/Fact4"
+    },
+    "primary_control": {
+      "$ref": "#/$defs/Fact2"
+    },
+    "produced_at_monotonic_ms": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "rear_grip": {
+      "$ref": "#/$defs/Fact2"
+    },
+    "revision": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "contract_version",
+    "host_boot_id",
+    "revision",
+    "produced_at_monotonic_ms",
+    "carrier_state",
+    "front_grip",
+    "rear_grip",
+    "motion",
+    "pose",
+    "primary_control",
+    "node_health"
+  ],
+  "title": "A.I.Live Gun Spirit PerceptionState v0.2",
+  "type": "object"
+}

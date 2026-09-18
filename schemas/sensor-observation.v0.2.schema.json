@@ -1,0 +1,250 @@
+{
+  "$defs": {
+    "BootId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "Contact": {
+      "enum": [
+        "engaged",
+        "released"
+      ],
+      "type": "string"
+    },
+    "ContractVersion": {
+      "enum": [
+        "0.2"
+      ],
+      "type": "string"
+    },
+    "MotionClass": {
+      "enum": [
+        "idle",
+        "moving"
+      ],
+      "type": "string"
+    },
+    "NodeUid": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ObservationId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "Permille": {
+      "format": "uint16",
+      "maximum": 1000,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "PrimaryControlId": {
+      "enum": [
+        "primary_trigger"
+      ],
+      "type": "string"
+    },
+    "SensorObservationKind": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "grip_contact",
+              "type": "string"
+            },
+            "payload": {
+              "additionalProperties": false,
+              "properties": {
+                "contact": {
+                  "$ref": "#/$defs/Contact"
+                },
+                "strength_milli": {
+                  "$ref": "#/$defs/Permille"
+                }
+              },
+              "required": [
+                "contact",
+                "strength_milli"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "motion_class",
+              "type": "string"
+            },
+            "payload": {
+              "additionalProperties": false,
+              "properties": {
+                "motion": {
+                  "$ref": "#/$defs/MotionClass"
+                }
+              },
+              "required": [
+                "motion"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "orientation_estimate",
+              "type": "string"
+            },
+            "payload": {
+              "additionalProperties": false,
+              "properties": {
+                "gravity_mg_x": {
+                  "description": "Filtered gravity direction in milli-g. Exact wire bounds remain a measured DTO decision.",
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "gravity_mg_y": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "gravity_mg_z": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "quality_milli": {
+                  "$ref": "#/$defs/Permille"
+                }
+              },
+              "required": [
+                "gravity_mg_x",
+                "gravity_mg_y",
+                "gravity_mg_z",
+                "quality_milli"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "aux_control_contact",
+              "type": "string"
+            },
+            "payload": {
+              "additionalProperties": false,
+              "properties": {
+                "contact": {
+                  "$ref": "#/$defs/Contact"
+                },
+                "control_id": {
+                  "$ref": "#/$defs/PrimaryControlId"
+                }
+              },
+              "required": [
+                "control_id",
+                "contact"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "shock_observed",
+              "type": "string"
+            },
+            "payload": {
+              "additionalProperties": false,
+              "properties": {
+                "severity_milli": {
+                  "$ref": "#/$defs/Permille"
+                }
+              },
+              "required": [
+                "severity_milli"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "payload"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "https://oclive.dev/schemas/ailive.gun-spirit/sensor-observation.v0.2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "boot_id": {
+      "$ref": "#/$defs/BootId"
+    },
+    "contract_version": {
+      "$ref": "#/$defs/ContractVersion"
+    },
+    "node_monotonic_ms": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "node_uid": {
+      "$ref": "#/$defs/NodeUid"
+    },
+    "observation": {
+      "$ref": "#/$defs/SensorObservationKind"
+    },
+    "observation_id": {
+      "$ref": "#/$defs/ObservationId"
+    },
+    "sequence": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "contract_version",
+    "observation_id",
+    "node_uid",
+    "boot_id",
+    "sequence",
+    "node_monotonic_ms",
+    "observation"
+  ],
+  "title": "A.I.Live Gun Spirit SensorObservation v0.2",
+  "type": "object"
+}

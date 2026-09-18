@@ -1,0 +1,8 @@
+{
+  "contract_version": "0.2",
+  "event_id": "event-forbidden-fired",
+  "host_boot_id": "host-boot-01",
+  "occurred_at_monotonic_ms": 200,
+  "caused_by_perception_revision": 2,
+  "kind": "weapon.fired"
+}

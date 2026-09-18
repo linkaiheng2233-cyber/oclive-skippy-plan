@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "BootId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ContractVersion": {
+      "enum": [
+        "0.2"
+      ],
+      "type": "string"
+    },
+    "DeviceEventKind": {
+      "enum": [
+        "carrier.held_entered",
+        "carrier.held_exited",
+        "carrier.ready_entered",
+        "carrier.ready_exited",
+        "control.primary.engaged",
+        "control.primary.released"
+      ],
+      "type": "string"
+    },
+    "EventId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "$id": "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "caused_by_perception_revision": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "contract_version": {
+      "$ref": "#/$defs/ContractVersion"
+    },
+    "event_id": {
+      "$ref": "#/$defs/EventId"
+    },
+    "host_boot_id": {
+      "$ref": "#/$defs/BootId"
+    },
+    "kind": {
+      "$ref": "#/$defs/DeviceEventKind"
+    },
+    "occurred_at_monotonic_ms": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "contract_version",
+    "event_id",
+    "host_boot_id",
+    "occurred_at_monotonic_ms",
+    "caused_by_perception_revision",
+    "kind"
+  ],
+  "title": "A.I.Live Gun Spirit DeviceEvent v0.2",
+  "type": "object"
+}

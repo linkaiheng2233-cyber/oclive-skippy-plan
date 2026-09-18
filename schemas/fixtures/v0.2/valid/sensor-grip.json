@@ -1,0 +1,15 @@
+{
+  "contract_version": "0.2",
+  "observation_id": "obs-front-0001",
+  "node_uid": "front-rail-01",
+  "boot_id": "front-boot-20260828-01",
+  "sequence": 1,
+  "node_monotonic_ms": 1250,
+  "observation": {
+    "kind": "grip_contact",
+    "payload": {
+      "contact": "engaged",
+      "strength_milli": 780
+    }
+  }
+}

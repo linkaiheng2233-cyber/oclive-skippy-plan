@@ -1,0 +1,26 @@
+{
+  "contract_version": "0.2",
+  "host_boot_id": "host-boot-invalid-sources",
+  "revision": 3,
+  "produced_at_monotonic_ms": 1000,
+  "carrier_state": {
+    "status": "known",
+    "value": "held",
+    "observed_at_monotonic_ms": 900,
+    "fresh_until_monotonic_ms": 1200,
+    "confidence_milli": 700,
+    "source_refs": [
+      { "observation_id": "o1", "node_uid": "n1", "capability": "front_grip", "relation": "supports" },
+      { "observation_id": "o2", "node_uid": "n2", "capability": "rear_grip", "relation": "supports" },
+      { "observation_id": "o3", "node_uid": "n3", "capability": "motion", "relation": "supports" },
+      { "observation_id": "o4", "node_uid": "n4", "capability": "orientation", "relation": "supports" },
+      { "observation_id": "o5", "node_uid": "n5", "capability": "primary_control", "relation": "contradicts" }
+    ]
+  },
+  "front_grip": { "status": "unknown", "reason": "never_observed", "since_revision": 0 },
+  "rear_grip": { "status": "unknown", "reason": "never_observed", "since_revision": 0 },
+  "motion": { "status": "unknown", "reason": "never_observed", "since_revision": 0 },
+  "pose": { "status": "unknown", "reason": "never_observed", "since_revision": 0 },
+  "primary_control": { "status": "unknown", "reason": "never_observed", "since_revision": 0 },
+  "node_health": []
+}
