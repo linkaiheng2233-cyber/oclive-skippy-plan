@@ -1,99 +1,66 @@
-# 屏幕后置主机电池与充放电路线
+# 一体式显示主机舱电池与充放电路线
 
-## 1. 与无线节点电池分层
+**SSOT 范围**：本文负责主机电源拓扑、测量与升级门；当前功耗、Wh、质量和包络占位以`HARDWARE_IMPLEMENTATION_PLAN.md`为准。
+**最后更新**：2026-08-31
+**状态**：Current
 
-本文件描述导轨主机的主电池：它位于屏幕后方，向 Linux 主板、屏幕、固定 IMU 和 BLE Central 供电，并支持 USB-C 充电。Grip/Shoulder Node 仍是物理独立的无线节点，继续使用 `POWER_BUDGET.md` 中的 CR2032/CR1632 路线；两类电池不能混为一个功耗模型。
-
-## 2. 冻结电源拓扑
-
-```text
-USB-C input
-  → input protection / current limit
-  → 1S charger with true power path + NTC
-       ├→ protected rechargeable 1S Li-ion/Li-polymer pack
-       └→ system rail → DC/DC → Linux board / LCD / fixed sensor root
-                         └→ fuel measurement / orderly shutdown
-```
-
-- 电芯为带保护与温度采样的 1S 可充锂电包，具体尺寸/容量在功耗测量后选择。
-- 必须有真正的 power-path/load-sharing：插拔充电器时主机不重启，系统负载优先，余量用于充电。
-- 充电管理需要输入限流、NTC 温度监控、过压/过流/短路与安全定时；不能只把廉价充电小板接到运行中的 Linux 板。
-- 主板需要可读电量/电压状态，并在临界电量时完成屏幕提示、日志落盘和正常关机。
-- v0.1 不做无线/磁吸充电，不做热插拔双电池。
-
-TI BQ25628E/BQ2407x 级器件用于说明所需能力：单节锂电、系统 power path、温度监控和系统边运行边充电。最终芯片根据所选板卡电压、峰值电流、USB-C 输入与散热重新评审，不在机械方案阶段锁料号。
-
-## 3. 屏幕后置电池的真实约束
-
-相机侧翻屏只能给出正面尺寸，不能证明 Linux 主机电池也能做得同样薄。电池所需能量按下式估算：
-
-屏幕功耗基线由 `DISPLAY_SELECTION.md` 先行确定。当前 2.8 英寸候选的 LCD 逻辑 + 满亮背光典型量级约 0.52 W；这只是裸屏负载，不包含 SPI 传输、Linux 板、Wi-Fi/BLE、DC/DC 和充电损耗。必须对 25/50/75/100% PWM 档位实测，不能用标称峰值直接推算整机续航。
+## 1. 电源域
 
 ```text
-E_pack_Wh = P_system_avg_W × runtime_h / (conversion_efficiency × usable_fraction)
+complete protected 5 V power source
+  → protected distribution
+      ├── Orange Pi Zero 3W 6GB / A733 + board-mounted cooling
+      ├── HDMI screen + USB touch
+      └── P1 USB hub/camera (later)
 ```
 
-以下只用于展示量级，假设转换效率 85%、可用容量 80%、单节标称电压 3.7 V：
+主机电源与前/后BLE节点的1S LiPo完全独立。P0不拆成品电源、不改电芯、不用PD诱骗请求9/12V。旧路线的固定5V/3A级只保留为首个台架检查点，不能假定足以同时覆盖A733、板载风扇、主动DP转HDMI、屏幕和本地3B峰值；先使用可限流且有余量的台架电源测出真实最低电压与峰值，再冻结成品电源。屏幕和主板由分配点分别供电，禁止屏幕反向代供主板。
 
-| 主机平均功耗 | 4 小时所需包能量/等效容量 | 8 小时所需包能量/等效容量 |
-|--------------|---------------------------|---------------------------|
-| 1.5 W | 约 8.8 Wh / 2,400 mAh | 约 17.6 Wh / 4,800 mAh |
-| 2.5 W | 约 14.7 Wh / 4,000 mAh | 约 29.4 Wh / 7,900 mAh |
-| 3.5 W | 约 20.6 Wh / 5,600 mAh | 约 41.2 Wh / 11,100 mAh |
+## 2. 为什么 P0 先用完整成品电源
 
-因此“主云端、开发板小”仍不等于低功耗。屏幕背后能否同时满足薄、轻和 8 小时，取决于 Linux 板、屏幕背光、Wi-Fi 占空比和待机策略。容量和厚度必须在 USB 功耗实测后冻结。
+第一轮目标是获得真实平均/峰值功耗、四小时能量、热与三轴手感数据。完整受保护电源能把自制锂电 pack、充电 power-path、NTC 和低压切断风险推迟到有数据之后。代价是低电遥测、自动休眠和边充边用行为可能不可控；不合格时更换整件，不拆壳修改。
 
-## 4. 功耗状态
+P0 充电时正常关闭 Linux 和负载，不承诺 pass-through。V1 是否定制 1S 升压、2S 降压、监督 MCU 或电池匣，只由 P0 数据触发。
 
-| 状态 | 主机行为 | 目标 |
-|------|----------|------|
-| Active | 屏幕正常亮度、Wi-Fi 可用、处理事件/OCLive 回合 | 记录峰值与平均功耗 |
-| Interactive Idle | 屏幕降亮、Wi-Fi 保持、BLE 连接 | 数秒内恢复完整亮度 |
-| Standby | 屏幕关闭，应用状态机与 IMU/BLE 唤醒路径保持 | 首轮不假定 Linux suspend 可用 |
-| Critical Battery | 屏幕提示后落盘并正常关机 | 不让文件系统因硬断电损坏 |
-| Charge + Run | 外部电源同时带系统和充电 | 不重启、不过热、不反复充停 |
+## 3. 功耗与续航测量
 
-屏幕背光是直接可控负载：无握持且 IMU 静止时应先降亮/熄屏，而不是立即挂起整台 Linux。只有所选板卡在实机上通过 suspend/resume、IMU GPIO 唤醒和 Wi-Fi 恢复测试后，才增加系统级休眠。
+输入侧至少记录：关机静耗、启动峰值、屏亮四档、背光关、Wi-Fi idle/传输、两个BLE节点、SQLite/OCLive idle、3B模型未加载/常驻空闲/短句生成/连续压力、一次可选网络回合和P1 UVC。每档记录平均W、峰值W、5V最低电压、温度、CPU throttling和持续时间。
 
-## 5. 屏幕舱堆叠
-
-从屏幕正面到后壳的建议顺序：
+估算只使用：
 
 ```text
-replaceable clear protector
-→ recessed LCD + perimeter gasket
-→ rigid LCD carrier / heat spread path
-→ main PCB and antenna keep-out zones
-→ insulated protected battery pocket
-→ puncture-resistant rear cover
+required_Wh = measured_average_W × target_hours / usable_efficiency
 ```
 
-- 电池不能被 LCD、主板、泡棉或后盖持续压缩，预留制造公差和合理膨胀空间。
-- 电池与铰链螺钉之间设置刚性隔板和防穿刺距离。
-- 主板高热区、充电芯片与电芯不直接叠在同一热点；亮屏充电是温升验收的最坏工况。
-- 天线不得夹在电池与金属背板/导轨之间。
-- USB-C 口、开关键和维护螺钉不能处在三轴夹点或收纳接触面。
+效率、可用深度和低温余量必须写清。P0 目标是满足四小时的最小/轻量方案，不提前为八小时堆电池。
 
-## 6. 原型顺序
+## 4. 安全关机
 
-1. 先让候选样屏通过 `DISPLAY_SELECTION.md` 的 D1 光学、刷新和保护片测试。
-2. 使用 USB 功耗仪/电源分析仪测量候选 Linux 板 + 实际显示背板：开机、屏灭、25/50/75/100% 亮度、Wi-Fi idle、一次云端回合和 BLE 扫描/连接。
-3. 用可编程电源模拟 1S 电池与 DC/DC，验证最低电压、峰值、电压跌落和正常关机。
-4. 按实测平均功耗分别计算 4 小时与 8 小时电池包，制作等质量/等厚度假体。
-5. 把电池假体装入三轴屏幕舱，测重心、所需转轴扭矩和导轨夹具负载。
-6. 选择带保护/NTC 的实际电芯与 power-path 方案，完成充放电、边充边用和热测试。
-7. 最后冻结屏幕舱厚度；不得反过来先定“很薄”再牺牲电芯安全余量。
+P0 人工闭环：
 
-## 7. 主机电池验收门
+```text
+recessed shutdown request
+  → Host stops new work
+  → OCLive + Host checkpoint
+  → Linux shutdown
+  → independent safe-to-cut indication
+  → user cuts main 5 V
+```
 
-- 外部电源插拔、空电池启动和边充边用不导致 Linux 异常重启。
-- 充电、亮屏、Wi-Fi 与高 CPU 同时发生时，电池/主板温度在电芯与器件规格范围内。
-- 低电提示后能完成日志落盘和正常关机。
-- 4 小时为首个场地 Alpha 最低目标；8 小时是设计目标，必须用完整工作负载验证。
-- 500 次三轴循环后电池线、NTC、USB-C 与固定 IMU 链路无磨损/间歇断路；1,000 次为 K4 前验收。
-- 收纳贴合时泡棉与机械止挡承力，不能把外力传给电芯。
+普通充电宝不给 Linux 可信电量时，不虚构自动欠压保存。V1 监督电源若加入，仍复用同一 Shutdown Coordinator：Low 卸载可选负载；Critical Reserve 停新写/新角色回合，限时 checkpoint；监督器收到 ACK 或硬超时后切主 rail。
 
-## 8. 官方参照
+实体键和最低 System UI 不受 renderer/OCLive 故障阻塞。突然断电、日志写满和数据库恢复在副本卡上做 fault injection，不直接拿唯一数据卡试错。
 
-- [TI BQ25628E 单节锂电 power-path 充电管理](https://www.ti.com/product/BQ25628E)
-- [TI BQ2407x 单节锂电 power-path 数据表](https://www.ti.com/lit/ds/symlink/bq24074.pdf)
+## 5. 移动舱与回退
+
+P0 电源与屏、板一起移动，换取无跨轴供电线和完整外观。移动质量按屏、板、电源、散热、外壳、接头、线缆与关节从动件总和计算，并用硬件 SSOT 的三档假体测试。
+
+若超过质量退出门：先减电源容量、外壳和非必要接口/改紧凑板屏；仍失败才把电池移到固定导轨底座。后者会新增一根跨三轴 5 V 柔性线，必须重新做弯曲、应变释放、限位、压降、噪声和断线降级评审，不能只改 CAD。
+
+## 6. 背光策略
+
+P0 保持 Linux、BLE 和触摸运行，只管理`active → dim → backlight_off`。黑色画面不等于关背光，不用反复切整个 HDMI 板电源省电。时间窗和唤醒延迟是 HostProfile/实测参数；只有背光策略仍无法达成四小时，才评审环境光、CPU governor/外设电源域或更深低功耗，不先使用可能破坏 BLE/HDMI 恢复的 suspend。
+
+## 7. 冻结门
+
+完成`test-worksheets/04-主机电源与关机测试表.md`和`ORANGE_PI_BRINGUP_WORKSHEET.md`后，才冻结电源料号/能量/布局。至少满足：20 次冷启动、峰值不 brownout、四小时完整负载、背光控制、充电关机流程、低电/硬切行为已知、温升可接受、关机恢复与数据库检查通过。

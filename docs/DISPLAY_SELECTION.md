@@ -1,136 +1,81 @@
-# 屏幕选型与冻结门
+# 屏幕、主板与视频接口冻结门
 
-## 1. 当前结论
+**SSOT 范围**：本文负责显示方案比较与冻结方法；当前型号、功耗/尺寸占位和整机拓扑以`HARDWARE_IMPLEMENTATION_PLAN.md`为准。
+**最后更新**：2026-08-31
+**状态**：Current
 
-屏幕必须先于屏幕舱外壳、主电池和最终关节力矩冻结。v0.1 的首选工程基线是：
+## 1. 当前执行路线
 
-- 2.8 英寸、原生 240 × 320，装机默认横向 320 × 240。
-- IPS、无触摸、户外高亮，目标 800–1,000 cd/m²；优先带抗眩光表面。
-- 4-wire SPI 或 8080 并口；首个 Linux 原型使用 SPI，主板与显示背板留在屏幕后方。
-- 角色表情 + 极简 HUD，不以视频、网页或桌面环境为负载目标。
-- 以 Newhaven `NHD-2.8-240320AF-CSXP-F Rev1B` 为首选样屏，但只有样品通过本文件的 D1 验收后才锁料号。
-
-首选样屏横放后的裸屏外廓约为 69.2 × 50 × 3.39 mm，能够把屏幕舱正面控制在约 74–78 × 54–58 mm 的工程区间。此前 `≤75 × 55 mm` 保留为美学目标，不再作为尚未看过实屏时的刚性承诺。
-
-## 2. 为什么不是先选 HDMI/DSI 开发模块
-
-3.5 英寸成品小屏模块的外形和裸屏差异很大：
-
-| 候选 | 分辨率 | 亮度 | 模块/裸屏外廓 | 接口 | 当前判断 |
-|------|--------|------|-----------------|------|----------|
-| Newhaven NHD-2.8-240320AF-CSXP-F Rev1B | 240 × 320 | 1,000 cd/m² | 50 × 69.2 × 3.39 mm | SPI / 8080 | v0.1 首选样屏 |
-| Newhaven NHD-3.5-640480EF-MSXP | 640 × 480 | 950 cd/m² | 76.9 × 63.9 × 3.2 mm | 4-lane MIPI DSI | 高分辨率升级候选 |
-| Riverdi RVT35HHBNWN00 | 320 × 240 | 1,000 cd/m² | 76.9 × 63.9 × 8.77 mm；44 g | SPI/QSPI + BT817Q | 显示卸载备选，但同分辨率更大更厚 |
-| Waveshare 3.5inch 480×800 LCD | 480 × 800 | 300 cd/m² | 88.87 × 52.56 × 7.15 mm | HDMI + USB/I²C touch | 桌面 bring-up 可用，不进入上枪外壳 |
-| Waveshare 3.5inch DSI LCD (E) | 640 × 480 | 180 cd/m² | 成品触控模块 | Raspberry Pi DSI | 约 0.5 W，但户外亮度不足 |
-| Newhaven NHD-3.5-HDMI-HR-RSXP | 640 × 480 | 950 cd/m² | 约 92 × 84.9 × 15.8 mm | HDMI/USB | 高亮且易接 Linux，但只适合台架 |
-
-HDMI 最容易在任意 Linux 主机点亮，却把桥接芯片、连接器、PCB 和约 2.3 W 的显示模块功耗一起带进屏幕舱；小型 DSI 成品模块功耗低，但常见 180–300 cd/m² 版本不能代表 wargame 户外体验。最终产品应围绕裸屏和自己的显示/电源背板集成，成品 HDMI 屏只承担软件台架角色。
-
-## 3. 首选样屏的工程含义
-
-`NHD-2.8-240320AF-CSXP-F Rev1B` 的官方数据为：
-
-- 外廓：50 × 69.2 × 3.39 mm；横放后为 69.2 × 50 mm。
-- 可视区：44.2 × 58.6 mm；横放后为 58.6 × 44.2 mm。
-- 240 × 320、IPS、全视角、无触摸、抗眩光、1,000 cd/m²。
-- ST7789VI，3/4-wire SPI 或 8/16-bit 8080-II，40-pin 0.5 mm FFC。
-- LCD 典型约 3.3 V / 8 mA，背光约 3.1 V / 160 mA；满亮显示部分的典型量级约 0.52 W，不包含 Linux 主板和 DC/DC 损耗。
-
-这会直接冻结以下方向：
-
-1. 默认 UI 画布为 320 × 240 landscape、RGB565；PNG/表情资产必须在这个画布上先验收。
-2. v0.1 不做触摸。模式/维护使用实体键、调试接口或后续管理端，不让屏幕保护与手套操作受触摸层牵制。
-3. 屏幕后增加一块显示背板：40-pin FFC、SPI/模式配置、复位、可选 TE、背光恒流/PWM、ESD 与测试点。
-4. 背光不能直接由 GPIO 或电阻粗放供电；按 160 mA 级恒流与 PWM 调光设计，并实测 25/50/75/100% 档位的亮度、功耗和温升。
-5. 裸屏无安装孔，必须使用刚性 carrier 和边缘支撑；前方增加可更换抗刮/低反射保护片，泡棉只压在非有效区和外壳承力边。
-
-## 4. Linux 显示路线
-
-应用继续保持无桌面环境：
+P0 首轮模块化 bring-up 使用：
 
 ```text
-VisualCue
-  → 320×240 scene renderer
-  → dirty-rectangle / frame scheduler
-  → DisplaySink
-       ├── mock window/file sink (Windows/Linux test)
-       ├── Linux SPI MIPI-DBI sink (primary hardware path)
-       └── DRM/KMS sink (optional board/kernel path)
-  → ST7789VI panel
+Orange Pi Zero 3W 6GB / A733
+  → 壳内短 USB-C DP Alt Mode 主动转 HDMI
+  → 3.5inch 480×800 HDMI IPS touch 候选屏
+  → 横向 UI 800×480
 ```
 
-- 首轮 SPI 使用 4-wire 模式，避免 9-bit SPI 控制器兼容性问题。
-- 一帧 RGB565 为 153,600 bytes。32 MHz SPI 的纯线速理论上限约 38.4 ms/帧（约 26 fps）；实际帧率受控制器、复制和面板时序限制，必须实测，不以理论值承诺动画帧率。
-- UI 采用状态画面、局部 HUD 和脏矩形刷新，不要求持续 30/60 fps。即时状态切换目标仍是事件进入到首个可见像素 p95 ≤150 ms。
-- Linux 内核存在通用 MIPI-DBI SPI DRM 路径，但具体板卡内核、设备树、初始化序列和背光仍需集成；本仓保留直接 SPI backend，避免把项目成败绑死在某个发行版的显示 overlay 上。
-- 如果 320 × 240 的真实 UI 评审失败，再进入 3.5 英寸 640 × 480 MIPI DSI。不能仅因参数更高就预先承担更大的正面外廓、4-lane DSI 转接和板级驱动风险。
+这里冻结的是接口和验证顺序，不是尚未到货的具体店铺料号。屏幕、主板、触摸、主动视频转接、短视频线与P0完整5V电源位于同一三轴移动主机舱，视频线不跨yaw/pitch/roll。Zero 3W没有为当前屏幕提供原生HDMI插座，因此主动DP转HDMI件是当前路线的必要部件而不是可忽略小附件。Luckfox Lyra Zero W + Waveshare 2.8inch DSI LCD只在移动质量、厚度、功耗或接头包络不通过时作为紧凑回退，不并行开发。
 
-## 5. 屏幕舱初始堆叠
+## 2. 为什么当前先用 HDMI
 
-以首选样屏为基线，从正面到后壳为：
+| 维度 | Orange Pi + HDMI | Lyra + DSI 回退 |
+|------|------------------|-----------------|
+| 内存余量 | 6 GB，允许本地OCLive、Web/2D与CPU量化3B候选并行实测 | 512 MB，必须严格裁剪并实机证明 |
+| 接口通用性 | 标准 Linux 显示链，替换屏/板更容易 | 板屏匹配更紧，排线更薄 |
+| 首轮调试 | 可先在 Windows/普通 HDMI 上验证 800×480 UI | 更依赖厂商镜像、设备树与特定屏适配 |
+| 机械代价 | USB-C DP主动转HDMI、HDMI接头/驱动板较厚，必须用壳内短线与包络门约束 | FPC 存在感低，整体可能更薄 |
+| 当前角色 | P0 数据获取与闭环 | 重量/厚度失败时的有界回退 |
 
-```text
-0.5–1.0 mm replaceable low-reflection protector
-→ perimeter foam bumper, 0.8–1.5 mm proud of protector
-→ recessed 69.2 × 50 × 3.39 mm LCD
-→ rigid LCD carrier + 40-pin FFC strain relief
-→ display/power carrier PCB
-→ Linux compute board + antenna keep-out
-→ protected 1S battery pocket
-→ puncture-resistant rear cover + roll joint load path
-```
+HDMI 的收益不是“画质一定更高”，而是第一轮更容易获得可替换、可诊断的显示链。若实测证明 HDMI 板、接头与 Orange Pi 让移动舱不可接受，再用数据触发 DSI 回退。
 
-暂用三套厚度假体 `18 / 22 / 26 mm` 验证观感、收纳和碰撞；这不是产品厚度承诺。实际厚度由开发板、连接器、电芯和安全间隙相加决定。前脸和厚度必须分开管理：裸屏可以很薄，但完整 Linux 屏幕舱不会等同于相机裸侧屏。
+## 3. 屏幕质量要求
 
-## 6. 采购与冻结顺序
+采购页面不能只看尺寸和分辨率。候选必须记录：
 
-### D0：不等硬件的软件门
+- LCD/显示板完整外廓、厚度、安装孔、接口朝向和线缆弯曲空间。
+- IPS 视角、实际亮度、背光档位与软件控制方式。
+- 电容/电阻触摸类型、USB HID 兼容和手套/保护片表现。
+- 户外可读性、偏振护目镜方向、玻璃反光与最低可用亮度。
+- 20 次冷启动点亮率、旋转、花屏/闪屏、睡眠/唤醒和两小时稳定性。
+- 25/50/75/100% 背光下整屏输入功耗与温升。
 
-- Windows mock 与所有角色图按 320 × 240 横屏渲染。
-- 检查最小字号、表情辨识度、网络/电量/模式 HUD 占用和黑屏降级。
-- 如果核心画面必须依赖 640 × 480 才能成立，立即触发 D2，不制作 2.8 英寸外壳。
+商品图中的“IPS”“高清”“树莓派兼容”不算本项目实测。若卖家无法提供机械图、背光控制说明和触摸接口，仍可做样品，但不能直接锁为产品屏。
 
-### D1：2.8 英寸样屏门（推荐）
+## 4. P0 验证顺序
 
-采购建议：1 块官方 breakout 用于台架，2 块 `NHD-2.8-240320AF-CSXP-F Rev1B` 裸屏用于背板与结构验证。到货先核对 Rev1B；Rev1A 的接口和亮度不能混用。
+### D0：桌面 UI
 
-通过条件：
+在 Windows/普通 HDMI 输出上用 800×480 构建角色页、状态条与系统 Overlay，确认文字大小、触摸目标、横竖策略和 PNG fallback。不等待 Linux 板卡。
 
-- 正午日照、树荫和室内三种环境均拍照记录；在预计观察距离和护目镜下表情/HUD 可辨。
-- 分别测试普通透明片与低反射保护片；检查偏振护目镜横竖方向是否出现不可接受的变暗或黑屏。
-- 25/50/75/100% 背光下记录输入功耗、屏面亮度、主板和电芯温升。
-- 连续刷新 2 小时无花屏、撕裂、卡死和内存增长；事件到首个可见像素 p95 ≤150 ms。
-- 冷启动、异常断电恢复、屏灭/唤醒和 1,000 次 FFC/关节等效弯折后仍正常。
-- 装入保护片、泡棉、carrier 和背板后的实测外廓、厚度、质量、重心进入机械台账。
+### D1：板屏点亮
 
-D1 通过后，才能冻结屏幕舱前脸、显示背板和新的三档完整舱体配重。
+Orange Pi使用稳定桌面5V电源，记录镜像/内核/设备树/主动DP转HDMI芯片与屏幕板revision；先显示固定测试图，再运行mock ViewModel。验证EDID、800×480时序、USB touch、旋转、背光、转接温升和20次冷启动。
 
-### D2：高分辨率升级门
+### D2：资源与共存
 
-仅在以下任一条件成立时评估 3.5 英寸 640 × 480 MIPI DSI：
+在屏亮、Wi-Fi、两个 BLE 模拟连接、本地 OCLive 和日志运行时记录 RSS、`MemAvailable`、CPU/温度、首像素、事件到画面延迟与两小时稳定性。
 
-- 320 × 240 下核心角色表情或必须存在的 HUD 无法辨识。
-- SPI 实测刷新延迟无法满足即时反馈，且局部刷新仍不能解决。
-- Linux 主板已证明能稳定驱动目标 4-lane MIPI 面板，且 76.9 × 63.9 mm 裸屏和更大外壳通过 RADIAN 包络检查。
+### D3：机械与户外
 
-## 7. 样屏否决项
+把屏、板、接头、散热、电源和外壳放入完整质量/厚度假体，检查天线、热、保护片、泡棉、触摸、偏振和三轴手感。只有 D1–D3 通过才冻结屏幕料号和前脸 CAD。
 
-- 户外画面需要长期满亮仍不可辨，或保护片反射抵消高亮优势。
-- 与常用偏振护目镜组合时关键姿态黑屏。
-- 显示背板、主板与电池无法在不压迫电芯的前提下进入可接受包络。
-- SPI 刷新阻塞传感器/状态机，事件首像素延迟超标且无法通过独立线程、DMA 或局部刷新修正。
-- 采购版本不可控、生命周期不可接受，或同料号修订导致接口/亮度不兼容。
+## 5. 回退触发
 
-## 8. 官方资料
+满足任一项才重开 Lyra + DSI，而不是凭偏好同时维护两套：
 
-- [Newhaven NHD-2.8-240320AF-CSXP-F 产品页](https://newhavendisplay.com/2-8-inch-ips-tft-without-touchscreen/)
-- [Newhaven NHD-2.8-240320AF-CSXP-F 规格书](https://newhavendisplay.com/content/specs/NHD-2.8-240320AF-CSXP-F.pdf)
-- [Newhaven 2.8 英寸 Rev1A → Rev1B Transition Guide](https://newhavendisplay.com/content/docs/NHD-2.8-240320AF-CSXP-F_TransitionGuide.pdf)
-- [Newhaven NHD-3.5-640480EF-MSXP 产品页](https://newhavendisplay.com/3-5-inch-ips-tft-mipi-interface-without-touchscreen/)
-- [Newhaven NHD-3.5-640480EF-MSXP 规格书](https://newhavendisplay.com/content/specs/NHD-3.5-640480EF-MSXP.pdf)
-- [Riverdi RVT35HHBNWN00 规格书](https://download.riverdi.com/RVT35HHBNWN00/DS_RVT35HHBNWN00_Rev.1.7.pdf)
-- [Waveshare 3.5inch 480×800 LCD](https://www.waveshare.com/wiki/3.5inch_480x800_LCD)
-- [Waveshare 3.5inch DSI LCD (E)](https://www.waveshare.com/wiki/3.5inch_DSI_LCD_%28E%29)
-- [Newhaven NHD-3.5-HDMI-HR-RSXP 规格书](https://newhavendisplay.com/content/specs/NHD-3.5-HDMI-HR-RSXP.pdf)
-- [Linux MIPI-DBI DRM helper](https://docs.kernel.org/5.19/gpu/drm-kms-helpers.html)
+- 完整移动舱超过`HARDWARE_IMPLEMENTATION_PLAN.md`的质量退出门，且减电池/壳体/非必要接口后仍失败。
+- HDMI 接头、驱动板和线缆无法在目标厚度内安全隐藏。
+- 背光功耗或热导致 P0 续航/温升门无法满足。
+- Orange Pi 显示/触摸链出现无法通过更换样屏或镜像解决的稳定性问题。
+
+回退后仍必须保留本地 OCLive、SQLite、安全生命周期、双 BLE 节点和屏幕仲裁；不能用删核心能力来迁就 512 MB。
+
+## 6. 实测记录
+
+屏幕与主机结果填写：
+
+- `test-worksheets/02-主机与屏幕测试表.md`
+- `ORANGE_PI_BRINGUP_WORKSHEET.md`
+
+当前具体包络、功耗和假体档位见`HARDWARE_IMPLEMENTATION_PLAN.md`，不要在本文复制第二套数值。
