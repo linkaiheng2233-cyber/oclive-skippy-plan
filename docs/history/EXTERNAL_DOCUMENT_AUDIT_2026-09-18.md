@@ -1,7 +1,7 @@
 # 外部四季宝相关文档归并审计（2026-09-18）
 
 **状态**：HISTORICAL AUDIT  
-**扫描位置**：`C:\Users\13603\Desktop\A.I.Live-ai枪娘器灵-硬件到货测试包`、`C:\Users\13603\Desktop\Zero3W系统镜像`、`C:\Users\13603\Desktop\个人文档`、桌面根目录、`E:\OCLive` 周边目录  
+**扫描位置**：`<用户主目录>\Desktop\A.I.Live-ai枪娘器灵-硬件到货测试包`、`<用户主目录>\Desktop\Zero3W系统镜像`、`<用户主目录>\Desktop\个人文档`、桌面根目录、`E:\OCLive` 周边目录  
 **规则**：不删除桌面文件；仓库已有相同或更新 SSOT 时不制造第二份可编辑副本；哈希用于确认本次扫描对象，不代表内容真实性。  
 **前置**：`EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md`（已处理当时桌面 `个人文档` 的七个文件）；本文是 2026-09-11 首轮 bring-up 之后、于 2026-09-18 执行的新增扫描。
 
@@ -67,7 +67,7 @@
 | 内容 | 理由 |
 |---|---|
 | `水弹智能瞄准-结构思维实验记录.md` | 独立于四季宝的另一个项目构思；其"视觉辅助瞄准/枪管随动"跨越本仓明确禁止边界（`PROJECT_BOUNDARIES.md`）。**不进入 backlog，不建立仓库副本。** |
-| OCLive 路演材料（`OCLive-路演项目计划书.md`、`OCLive路演术语与概念说明.docx`、`A.I.Live-240800483林凯恒.pptx`、架构简图 svg/png） | 属于 OCLive 项目表达与商业材料，不是四季宝工程 SSOT。 |
+| OCLive 路演材料（`OCLive-路演项目计划书.md`、`OCLive路演术语与概念说明.docx`、`A.I.Live-路演演示.pptx`、架构简图 svg/png） | 属于 OCLive 项目表达与商业材料，不是四季宝工程 SSOT。 |
 | `gpt6的内核工作记录.txt`、`oclive的近期讨论.txt`、`codex对话关于oclive.txt`、`OCLive-工作交接-对接GPT6.md`、`Claude Code探索与OCLive启发…` | OCLive 内核梳理与聊天导出，归 OCLive 仓或个人档案。 |
 | 个人材料（`开发者简介.txt`、`用户简介.txt`、`开发故事.txt`、`接单需求统计…`、`情绪引擎方案A对接…`、`AI我的世界（游戏）PC.md`、`deepseek人设指导.txt`、`AI聊天有感…`） | 个人/其它项目，与四季宝工程无关。 |
 | 内测包目录与 zip、`ChatGPT_Image_*.png`、快捷方式 | 构建产物或素材，不是文档。 |
@@ -82,7 +82,7 @@
 | 原始镜像 + 压缩包 | 同目录 `…minimal.img`（`D4BB7C8B…077C0BCB`）与 `.img.xz`（`915054FE…9366C632`，与下载源一致） | 同上 |
 | 调试脚本 / SSH 密钥 / known_hosts | `bringup-toolchain\`（21 个文件） | 已归档；工作副本仍在 `E:\WSL\` |
 | 便携 OpenSSH 客户端 | `E:\WSL\openssh\` | 保留为工具链（Windows 自带 9.5 与服务端 10.0 不兼容） |
-| 桌面快捷方式 | `C:\Users\13603\Desktop\Zero3W镜像与工件.lnk` → 工件目录 | 便于现场快速取镜像烧录 |
+| 桌面快捷方式 | `<用户主目录>\Desktop\Zero3W镜像与工件.lnk` → 工件目录 | 便于现场快速取镜像烧录 |
 
 桌面 `Zero3W系统镜像` 目录已清空并删除，桌面不再存放二进制工件。工件路径与校验值同时记入 `test-worksheets/runs/2026-09-11-zero3w-first-bringup.md`§6。
 

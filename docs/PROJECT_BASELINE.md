@@ -22,7 +22,7 @@
 | 主板 | Orange Pi Zero 3W / A733（A76+A55） | `MEASURED`：主机名`orangepizero3w`、Armbian 26.8.1 trixie（Debian 13.6）、内核 6.6.98-vendor-sun60iw2、DTB `sun60i-a733-orangepi-zero3w`；**RAM容量仍`UNKNOWN`**（未在系统内核验） |
 | 屏幕 | 3.5英寸、目标800×480横向、HDMI视频 | `REPORTED_RECEIVED`；面板原生480×800（EDID曾读出256字节，DTD像素时钟34.86MHz）；**仅HDMI与`only power`USB-C两口，疑无触摸**（`GS-HW-003`） |
 | 视频链 | Mini HDMI↔HDMI（当前）／USB-C DP Alt→主动转HDMI（备选） | **未通过**：随附Mini HDMI线DDC通道间歇失效，HPD反复跳变，接已知良好显示器仍EDID=0、无模式、无`/dev/fb0`；板卡HDMI输出与驱动已证明正常（`GS-HW-002`） |
-| 主机系统与远程通道 | Armbian + WiFi + SSH | `MEASURED`：WiFi `1503`（5GHz信道44）、`wlan0` 192.168.2.184/24、免密公钥SSH可用、开机自诊断服务已落地——**后续调试不必重烧卡** |
+| 主机系统与远程通道 | Armbian + WiFi + SSH | `MEASURED`：WiFi 已连接（5GHz 信道 44）、`wlan0` 取得内网地址、免密公钥 SSH 可用、开机自诊断服务已落地——**后续调试不必重烧卡**（SSID/内网地址/MAC 见仓库外工件 `bringup-toolchain/network-identifiers.txt`） |
 | 主机台架供电 | 台式数控电源 5.00V / 限流3A | `MEASURED`：冷启动峰值≈0.8A → 稳态0.36–0.41A（≈1.8–2.1W）；限流设0.5A会导致启动欠压停机 |
 | 主机散热 | 散热片 + 温控2-PIN风扇 | `MEASURED`：8个thermal zone 40.5–46.1°C，10分钟温度平台化，风扇在温度稳定时停转 |
 | 无线节点 | 前下导轨节点 + 后握把节点，XIAO nRF52840系列、FSR/IMU候选 | `REPORTED_RECEIVED/UNKNOWN`，以到货清单核验 |

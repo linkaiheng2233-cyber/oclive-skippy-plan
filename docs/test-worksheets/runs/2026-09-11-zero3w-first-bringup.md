@@ -55,8 +55,9 @@
 
 | 观测 | 结果 |
 |---|---|
-| WiFi | SSID `1503`，**5GHz 信道 44（80MHz）**，`wlan0` = 192.168.2.184/24 |
-| wlan0 MAC | `10:4d:05:af:a4:06` |
+| WiFi | SSID `<已隐去>`，**5GHz 信道 44（80MHz）**，`wlan0` = `<内网地址>`/24 |
+| wlan0 MAC | `<已隐去>` |
+| 网络标识说明 | SSID、内网地址与 `wlan0` MAC 在公开仓中隐去；原始值保存在仓库外工件目录的 `bringup-toolchain/network-identifiers.txt`，需要复现时从该文件取用 |
 | SSH | `ssh.service` 启用；**免密公钥登录成功**（公钥已注入镜像） |
 | 远程能力 | 可远程执行 dmesg / DRM 状态 / 温度 / 网络 / 文件操作 → **后续调试无需重烧卡** |
 | 开机自诊断 | systemd 服务自动采集 `/root/opi-diag.log`（16,696 B）与 `/root/dmesg-full.txt`（115,637 B） |
@@ -141,7 +142,7 @@
 | 调试脚本与密钥归档 | `bringup-toolchain\`（21 个文件：诊断/监测/填色脚本、SSH 密钥、known_hosts） | — |
 | 板端日志 | `/root/opi-diag.log`、`/root/dmesg-full.txt`（在 SD 卡内，可离线读取） | — |
 | 便携 SSH 客户端（工作副本） | `E:\WSL\openssh\ssh.exe`（10.0p2；Windows 自带 9.5 不兼容服务端 hostbound 签名） | — |
-| 桌面调试记录（外部副本） | `C:\Users\13603\Desktop\Zero3W调试记录-2026-09-11.md`（已标 `SUPERSEDED`，内容归并入本文档） | — |
+| 桌面调试记录（外部副本） | `<用户主目录>\Desktop\Zero3W调试记录-2026-09-11.md`（已标 `SUPERSEDED`，内容归并入本文档） | — |
 
 ## 7. 下一步（按顺序）
 
