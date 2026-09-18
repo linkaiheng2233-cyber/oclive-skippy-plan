@@ -1,29 +1,38 @@
-[package]
-name = "oclive-skippy-spirit"
+[workspace]
+resolver = "2"
+members = [
+    "crates/ailive-gun-spirit-contracts",
+    "crates/ailive-gun-spirit-perception-core",
+    "crates/ailive-gun-spirit-host",
+]
+exclude = ["vendor/oclive_monolith_builtin"]
+default-members = ["crates/ailive-gun-spirit-host"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 publish = false
 authors = ["supermumu"]
 license = "MIT"
-description = "OCLive 四季宝器灵实体角色宿主与模拟器"
-default-run = "oclive-skippy-spirit"
 
-# 直接依赖 OCLive 的纯 headless host；硬件发行版不引入 Tauri/WebView。
-[dependencies]
-oclive_kernel_host = { path = "../oclivenewnew/kernel/crates/oclive_kernel_host" }
-oclive_kernel_runtime = { path = "../oclivenewnew/kernel/crates/oclive_kernel_runtime" }
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+expect_used = "warn"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "warn"
+
+[workspace.dependencies]
+schemars = "1.2.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-oclive_monolith_builtin = { path = "vendor/oclive_monolith_builtin" }
 
-[features]
-default = []
-monolith = []
-[[bin]]
-name = "oclive-skippy-spirit"
-path = "src/main.rs"
-
-[[bin]]
-name = "oclive-skippy-spirit-monolith"
-path = "src/main_monolith.rs"
-required-features = ["monolith"]
+# OCLive stays in its sibling repository. Only the integration host may depend on it.
+oclive_kernel_host = { path = "../oclivenewnew/kernel/crates/oclive_kernel_host" }
+oclive_kernel_runtime = { path = "../oclivenewnew/kernel/crates/oclive_kernel_runtime" }
+oclive_kernel_types = { path = "../oclivenewnew/kernel/crates/oclive_kernel_types" }
