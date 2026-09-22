@@ -20,7 +20,9 @@
 | `cargo audit` | PASS，298 个依赖、0 个漏洞级命中 | 保留；锁文件变化后必跑 |
 | `cargo metadata --no-deps` | 声称三 crate，实际四个 workspace member | `vendor` 已显式 exclude |
 
-最新收尾已在当前工作树运行 `./scripts/verify.ps1`，全部步骤 PASS：三个 manifest 格式、workspace/依赖边界、严格 Clippy、29 项 all-targets 测试（含100轮生命周期门）、doctest、Schema 零漂移和 `cargo audit`（298个依赖、0个漏洞级命中）。该结论仍受上方“脏工作树、未绑定提交 SHA”限制；表格中的14项只是本轮工程审查开始时的历史基线。
+**2026-09-22 更新（`GS-P0-BL-2026-09-22` 基线门禁）**：已在**干净工作树、绑定提交 `55d10e6`** 上重跑 `./scripts/verify.ps1`，全部步骤 PASS——三个 manifest 格式、workspace/依赖边界（3 members，依赖 allowlist 匹配）、严格 Clippy、**30 项 all-targets 测试**（含 100 轮生命周期门；比上轮记录多 1 项）、doctest、Schema 零漂移、`cargo audit`（298 依赖 / 0 漏洞级命中，1 条允许的 `chacha20 0.10.1` yanked 警告）。**这解除了此前"脏工作树、未绑定提交 SHA"的证据限制**，是本仓第一条绑定冻结提交的完整门禁记录。
+
+历史限制说明（保留）：上轮结论基于 `HEAD f3c5642` 加未提交工作树，只能证明当前工作树，不能冒充该 SHA 或远端 CI 证据。表格中的 14 项是那一轮工程审查开始时的历史基线。
 
 ## 2. 当前台账
 
@@ -44,6 +46,7 @@
 | GS-HW-004 | P2 | OPEN · board identity incomplete | 首轮只核验到主机名、OS、内核、设备树与根分区UUID；**RAM容量（报告6GB）、microSD料号、屏幕型号、环境温度均未在系统内核验**，运行记录中保持`UNKNOWN` | 下一轮采集`free -m`、`lscpu`、`lsusb -t`、`df -h`、`systemd-analyze`、本轮warning/error清单，回填`ORANGE_PI_BRINGUP_WORKSHEET.md`§2与§4 |
 | GS-DEV-001 | P2 | OPEN · toolchain not yet reproducible | 本轮为了建立远程通道与自诊断，对工作镜像做了4处修改（netplan WiFi、authorized_keys、opi-diag服务、armbianEnv参数）并重新拼接分区烧录；该流程目前只存在于会话记录与脚本中，未固化为可复现步骤 | 把镜像改造与远程调试流程写成受版本控制的文档与脚本（含Cygwin debugfs读写ext4、分区拼接、便携OpenSSH客户端版本要求、密钥管理），并在新镜像上做一次端到端复现验证 |
 | GS-DOC-002 | P2 | OPEN · 已刷新，但漂移是结构性的 | 09-18 审计声称「已完成重新导出」后，导出件**再次落后**：仓库源文档在导出动作之后又被修改，导出件必然随之过期。2026-09-22 复核实测 8 份过期（个人文档 5 + 到货测试包 3），已全部重新导出并逐份 SHA-256 验证一致；桌面 1 份独有采购价格已归并入 `test-worksheets/采购核对清单.md`。见 `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md` | 把「重新导出」固化为**可重放的单一脚本**（文件映射表 + 逐份 SHA-256 比对 + 自动刷新 `导出说明.md`），并在导出源变更后触发；**关闭条件是脚本存在且被实际重放，不是「导出过一次」** |
+| GS-QUALITY-002 | P2 | OPEN · 门禁依赖控制台代码页 | 2026-09-22 实测：在默认 Windows 控制台（代码页 **936/GBK**、`$OutputEncoding=20127`）下调用 `scripts/verify.ps1`，会在第 4 步 `check-workspace-boundaries.ps1` 的 `$metadataJson \| ConvertFrom-Json` 处抛 `ArgumentException` 并整体退出码 1。根因是 `cargo metadata` 输出为 UTF-8，其中中文仓库路径 `E:\OCLive\oclive-四季宝器灵` 被按 GBK 解码成非法 JSON。加 `[Console]::OutputEncoding=[Text.Encoding]::UTF8` 后同一脚本立即 PASS 并且完整门禁 PASS（`VERIFY_EXIT=0`） | 让 `verify.ps1` / `check-workspace-boundaries.ps1` **自行固定编码**（脚本内设置 `[Console]::OutputEncoding` 与 `$OutputEncoding`，或改用具名临时文件而非管道传 JSON），使门禁在任何控制台代码页下行为一致；关闭条件是新增对该场景的复现说明与一次非 UTF-8 控制台下的通过记录。**在此之前，门禁结论必须注明运行控制台编码** |
 
 ## 3. 不作为技术债的未实现项
 
