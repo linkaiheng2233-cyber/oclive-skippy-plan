@@ -1,0 +1,34 @@
+# 导出映射表 - scripts/export-docs.ps1 的唯一数据源
+# 本文件必须保存为 UTF-8 无 BOM。以 # 开头的行为注释。
+# 路径用正斜杠，相对于目标根目录。
+#
+# 目标根（相对 %USERPROFILE%）
+# root	Package	Desktop/A.I.Live-ai枪娘器灵-硬件到货测试包
+# root	Personal	Desktop/个人文档
+#
+# 生成清单块要写入的现场说明文件名（位于 Package 根下）
+# note	导出说明.md
+#
+# 映射行格式：Kind<TAB>目标文件名<TAB>仓库相对源路径
+Package	00-从这里开始.md	docs/test-worksheets/README.md
+Package	01-硬件到货清单.md	docs/test-worksheets/01-硬件到货清单.md
+Package	02-主机与屏幕测试表.md	docs/test-worksheets/02-主机与屏幕测试表.md
+Package	03-无线传感节点测试表.md	docs/test-worksheets/03-无线传感节点测试表.md
+Package	04-主机电源与关机测试表.md	docs/test-worksheets/04-主机电源与关机测试表.md
+Package	05-机械与场地测试表.md	docs/test-worksheets/05-机械与场地测试表.md
+Package	06-OrangePi详细系统测试表.md	docs/ORANGE_PI_BRINGUP_WORKSHEET.md
+Package	07-硬件实施计划-参考.md	docs/HARDWARE_IMPLEMENTATION_PLAN.md
+Package	08-项目人类阅读版-参考.txt	docs/handoff/四季宝-人类阅读版.txt
+Package	09-爱好者用户体验反馈表.md	docs/test-worksheets/06-爱好者用户体验反馈表.md
+Package	10-既有决策体验复核清单-参考.md	docs/UX_RESEARCH.md
+Package	11-余弹融合与弹匣结构测试表.md	docs/test-worksheets/07-余弹融合与弹匣结构测试表.md
+Package	12-余弹融合扩展设计-参考.md	docs/MAGAZINE_AMMO_ESTIMATION.md
+Package	13-Zero3W首轮运行记录-2026-09-11.md	docs/test-worksheets/runs/2026-09-11-zero3w-first-bringup.md
+Package	14-硬件工程入门-参考.md	docs/HARDWARE_ENGINEERING_GUIDE.md
+Package	采购核对清单.md	docs/test-worksheets/采购核对清单.md
+Personal	A.I.Live-ai枪娘器灵-开发纪律.md	docs/DEVELOPMENT_DISCIPLINE.md
+Personal	A.I.Live-ai枪娘器灵-技术债与审查台账.md	docs/TECHNICAL_DEBT.md
+Personal	A.I.Live-ai枪娘器灵-既有决策体验复核清单.md	docs/UX_RESEARCH.md
+Personal	A.I.Live-ai枪娘器灵-余弹融合扩展设计.md	docs/MAGAZINE_AMMO_ESTIMATION.md
+Personal	四季宝-人类阅读版.txt	docs/handoff/四季宝-人类阅读版.txt
+Personal	四季宝-智能战术配件系统-ai阅读版.txt	docs/handoff/四季宝-智能战术配件系统-ai阅读版.txt
