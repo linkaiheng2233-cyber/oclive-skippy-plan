@@ -1,7 +1,7 @@
 # A.I.Live-ai枪娘器灵技术债与审查台账
 
 **SSOT 范围**：本文件只记录可复现的工程风险、技术债、门禁缺口与关闭条件；不复制路线或硬件参数。  
-**最后更新**：2026-09-11  
+**最后更新**：2026-09-22  
 **状态**：Current  
 
 ## 1. 审查基线
@@ -43,7 +43,7 @@
 | GS-HW-003 | P1 | OPEN · touch capability unverified | 当前3.5英寸屏只有HDMI与USB-C（标注`only power`）两个接口，**很可能不提供触摸**；`OPZ-D02`无输入通道可测，直接影响P0的触摸交互门与屏幕选型 | 确认该屏是否支持触摸；不支持则按`DISPLAY_SELECTION.md`更换为带USB触摸的屏，并复测`OPZ-D02`裸手/手套/边缘误触 |
 | GS-HW-004 | P2 | OPEN · board identity incomplete | 首轮只核验到主机名、OS、内核、设备树与根分区UUID；**RAM容量（报告6GB）、microSD料号、屏幕型号、环境温度均未在系统内核验**，运行记录中保持`UNKNOWN` | 下一轮采集`free -m`、`lscpu`、`lsusb -t`、`df -h`、`systemd-analyze`、本轮warning/error清单，回填`ORANGE_PI_BRINGUP_WORKSHEET.md`§2与§4 |
 | GS-DEV-001 | P2 | OPEN · toolchain not yet reproducible | 本轮为了建立远程通道与自诊断，对工作镜像做了4处修改（netplan WiFi、authorized_keys、opi-diag服务、armbianEnv参数）并重新拼接分区烧录；该流程目前只存在于会话记录与脚本中，未固化为可复现步骤 | 把镜像改造与远程调试流程写成受版本控制的文档与脚本（含Cygwin debugfs读写ext4、分区拼接、便携OpenSSH客户端版本要求、密钥管理），并在新镜像上做一次端到端复现验证 |
-| GS-DOC-002 | P2 | OPEN · stale field exports | 桌面测试包副本已落后于仓库SSOT：`00/01/02/06/07/08/采购核对清单`共7份为旧版本，按旧版本现场操作会与现行工作表不一致 | 现场填写前从仓库重新导出；建立单一导出动作并在审计文档中记录导出时间与源提交 |
+| GS-DOC-002 | P2 | OPEN · 已刷新，但漂移是结构性的 | 09-18 审计声称「已完成重新导出」后，导出件**再次落后**：仓库源文档在导出动作之后又被修改，导出件必然随之过期。2026-09-22 复核实测 8 份过期（个人文档 5 + 到货测试包 3），已全部重新导出并逐份 SHA-256 验证一致；桌面 1 份独有采购价格已归并入 `test-worksheets/采购核对清单.md`。见 `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md` | 把「重新导出」固化为**可重放的单一脚本**（文件映射表 + 逐份 SHA-256 比对 + 自动刷新 `导出说明.md`），并在导出源变更后触发；**关闭条件是脚本存在且被实际重放，不是「导出过一次」** |
 
 ## 3. 不作为技术债的未实现项
 

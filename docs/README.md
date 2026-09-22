@@ -1,7 +1,7 @@
 # A.I.Live-ai枪娘器灵文档入口
 
 **状态**：CURRENT  
-**最后核对**：2026-09-04  
+**最后核对**：2026-09-22  
 **职责**：这是本仓唯一的文档导航入口。它说明先读什么、每类事实在哪里维护，以及哪些文件只是历史或上游参考。
 
 ## 1. 新参与者阅读顺序
@@ -90,5 +90,6 @@
 - `ARMV7_VALIDATION.md`：旧Lyra/ARMv7回退路线的历史与兼容证据。
 - `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md`：桌面个人文档与仓库SSOT的归并审计。
 - `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md`：bring-up首轮后的新增扫描（测试包导出件复核与刷新、个人文档比对、新导入项、排除项与工件位置）。
+- `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md`：导出件漂移复核（8 份重新导出、桌面独有采购价格归并入 `test-worksheets/采购核对清单.md`、排除项与后续动作）。
 
 这些文件若与项目基线、ADR或领域SSOT冲突，不具有覆盖权。
