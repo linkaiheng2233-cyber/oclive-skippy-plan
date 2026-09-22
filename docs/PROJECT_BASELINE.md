@@ -1,9 +1,11 @@
 # A.I.Live-ai枪娘器灵项目开发基线
 
-**Baseline ID**：`GS-P0-BL-2026-09-18`  
-**前一基线**：`GS-P0-BL-2026-09-04`（硬件仅`REPORTED_RECEIVED`，尚无实测）
-**状态**：ACCEPTED / 硬件已到货；**首轮 bring-up 已完成**——系统、网络与远程通道通过；视频链因随附线缆 DDC 故障未通过，待换线复测。运行证据见 `test-worksheets/runs/2026-09-11-zero3w-first-bringup.md`
-**唯一权威**：本仓 `E:\OCLive\oclive-四季宝器灵` 是四季宝的唯一权威；桌面、导出包与个人文档中的同名文件只是导出件或历史副本。基线 tag：`baseline/GS-P0-BL-2026-09-18`；分阶段提交与不入仓大工件规则见 `DEVELOPMENT_DISCIPLINE.md`§9。
+**Baseline ID**：`GS-P0-BL-2026-09-22`  
+**前一基线**：`GS-P0-BL-2026-09-18`（硬件已到货 + 首轮 bring-up；视频链因随附线缆 DDC 故障未通过）
+**状态**：ACCEPTED / **文档权威收敛完成**。硬件事实**未变**——首轮 bring-up 结论全部保持：系统、网络与远程通道通过；视频链因随附线缆 DDC 故障未通过，**待换线复测**。运行证据见 `test-worksheets/runs/2026-09-11-zero3w-first-bringup.md`
+**本基线改了什么**：只收敛文档与权威，**不动产品边界、感知契约、代码与任何硬件结论**。桌面独有的采购价格与采买优先级已归并入 `test-worksheets/采购核对清单.md`（此前仓库中不存在）；桌面导出件全部重新导出并逐字节验证；四季宝路演材料登记但不入仓。完整比对与理由见 `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md`。
+**门禁证据**：`./scripts/verify.ps1` 在**干净工作树、绑定提交 `55d10e6`** 上全部通过（3 包 fmt → workspace 边界 → Clippy `-D warnings` → **30 项 all-targets** → doctest → Schema 零漂移 → `cargo audit` 298 依赖 / 0 漏洞）。这解除了前一基线周期内"脏工作树、未绑定 SHA"的证据限制。
+**唯一权威**：本仓 `E:\OCLive\oclive-四季宝器灵` 是四季宝的唯一权威；桌面、导出包与个人文档中的同名文件只是导出件或历史副本。基线 tag：`baseline/GS-P0-BL-2026-09-22`；分阶段提交与不入仓大工件规则见 `DEVELOPMENT_DISCIPLINE.md`§9。
 **适用范围**：从当前桌面软件半闭环进入实体硬件开发，直到G4单机硬件原型验收  
 **变更方式**：改变产品边界、跨仓职责、安全红线或G4核心门必须新增ADR；测量值按工作表回填，不直接改写历史估算。
 
