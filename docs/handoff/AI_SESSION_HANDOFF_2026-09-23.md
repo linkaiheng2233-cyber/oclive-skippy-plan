@@ -103,6 +103,24 @@ pwsh -File 'E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\verify-displa
 1..254 | ForEach-Object -Parallel { $ip="192.168.2.$_"; $c=New-Object System.Net.Sockets.TcpClient; try { $t=$c.ConnectAsync($ip,22); if ($t.Wait(400) -and $c.Connected){$ip} } catch {} finally {$c.Close()} } -ThrottleLimit 64
 ```
 
+### ⚠️ 判定板子是否真的在线：必须用 ARP 或应用层证据
+
+**本机代理（TUN 模式，Mihomo/gvisor 栈）会伪造 ICMP 与 TCP 握手**：`ping` 会收到回包、端口看起来"开放"、SSH 甚至能"握手成功"却永远收不到 banner。因此：
+
+| 方法 | 可信度 |
+|---|---|
+| `ping` 回包 | ❌ 可能被代理代答 |
+| 端口"开放"（包括随机端口） | ❌ 可能被代理在本地接住 |
+| **ARP 表里有该 IP 的 MAC** | ✅ 二层信息，代理伪造不了 |
+| **应用层证据**：`uname -a`、`/proc/cmdline`、`dmesg`、`iw dev` 等真实回显 | ✅ 决定性 |
+| 路由器后台 DHCP 客户端列表 | ✅ 独立第三方 |
+
+推荐顺序：**先看 ARP（`arp -a`）→ 再做 SSH 并核对 `uname -a`/`/proc/cmdline`**；只用 `ping` 判定在线是本项目已经踩过的坑。
+
+**做局域网/板卡调试前**：关闭代理的 TUN 模式，或把 `192.168.0.0/16` 加入代理直连（bypass）列表；否则会出现"时通时不通 + 假在线"。
+
+**另一个隐患**：本机有线（`192.168.2.170`）与无线（`192.168.2.171`）**同时挂在同一网段**，两条默认路由指向同一网关。遇到"时通时不通"时优先怀疑它。
+
 ---
 
 ## 4. 硬件已确立事实（勿重复测）
@@ -166,6 +184,9 @@ pwsh -File 'E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\verify-displa
 8. **板子断电后**约 60 秒才重连 WiFi；扫不到就再等。
 9. **PowerShell 控制台编码**：默认 936/GBK 会让脚本内中文乱码（`GS-QUALITY-002`）；脚本保持 ASCII、中文放外部 UTF-8 映射文件。
 10. **Git CRLF 警告**：本仓文档含中文，提交时 CRLF/LF 警告无害，不要为它批量改行尾。
+11. **代理伪造在线（2026-09-23 实测）**：TUN 代理会代答 ICMP、在本地完成 TCP 握手，导致 `ping` 通、端口"开放"、SSH"握手成功但无 banner"等假象。判定设备在线**只能**用 ARP 表或应用层回显（`uname -a` 等）。调试局域网前先关 TUN 或把 `192.168.0.0/16` 设为直连。
+12. **双网卡同网段**：本机有线与无线同时在 `192.168.2.x`，两条默认路由同网关；出现"时通时不通"优先怀疑此项。
+13. **不要把"能 ping 通"当成 bring-up 证据**：首轮 bring-up 的结论建立在应用层回显上（`/proc/cmdline` 含注入参数、dmesg 驱动日志、`iw dev` 的 SSID、HPD 随物理插拔变化）以及**离线读卡**看到的根分区扩展，因此不受本次代理假象影响。任何后续连接都应同样以应用层证据归档。
 
 ---
 
