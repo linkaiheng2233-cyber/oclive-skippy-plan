@@ -89,7 +89,7 @@ pwsh -File 'E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\verify-displa
 |---|---|
 | 仓库 | `E:\OCLive\oclive-四季宝器灵`（唯一权威） |
 | 远端 | `origin` = `https://github.com/linkaiheng2233-cyber/oclive-skippy-plan`（公开，MIT） |
-| **GitHub 网络** | 本机**直连 `github.com:443` 不通**；已配置 `git config --global http.https://github.com.proxy http://127.0.0.1:7897`；`gh` 命令需临时 `$env:HTTPS_PROXY='http://127.0.0.1:7897'`（`api.github.com` 可直连） |
+| **GitHub 网络** | 直连 `github.com:443` **时通时不通**；已配置 `git config --global http.https://github.com.proxy http://127.0.0.1:7897`（本机 Clash 类代理）。**推送失败时的两种绕行**：① 代理不稳（`schannel: failed to receive handshake` / `unexpected disconnect`）→ 临时直连 `git -c http.https://github.com.proxy= push origin main`；② 直连不通 → 保持代理默认配置直接 `git push`。`gh` 命令需临时 `$env:HTTPS_PROXY='http://127.0.0.1:7897'`（`api.github.com` 通常可直连）。**推送后务必核对** `git rev-parse --short main` 与 `origin/main` 一致 |
 | 板子 | Orange Pi Zero 3W 6GB（A733），Armbian 26.8.1 trixie，内核 6.6.98 vendor |
 | 板端网络标识 | **不在仓库内**：`E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\network-identifiers.txt`（SSID / 内网地址 / MAC） |
 | SSH 登录 | `E:\WSL\openssh\ssh.exe -i E:\WSL\ssh\id_opi root@<板端地址>`（**必须用便携 10.x**，见 §7） |
