@@ -73,6 +73,7 @@ git status --short
 
 | 顺序 | 方案 | 成本 | 状态 |
 |---|---|---|---|
+| ⓪ | **DVI 信令试跑**（内核命令行给该连接器加 `D` 标志：`video=HDMI-A-1:480x800@60D`）——强制数字输出、跳过 HDMI 的 AVI/VSIF 信息帧，用来检验"厂商专用信息帧不兼容"这条根因 | 0 元 / 2 分钟 | **未实测提案**（2026-09-23 由 Claude 提出，待次日验证）。**注意**：`D` 由通用 DRM 解析（`DRM_FORCE_ON_DIGITAL`），但本厂商驱动是否采用它**未验证**；若驱动忽略该标志则本次结果**无效**，须比对 dmesg 的 `vsif` 行是否变化 |
 | ① | **`USB-C DP Alt → 主动式 DP→HDMI`**（基线原定路线；DP 不使用 VIC/AVI/VSIF，很可能绕开该兼容问题） | 30–80 元 | **已购山泽，待到货验证** |
 | ② | 换"**能作为通用 HDMI 接收端工作**、EDID 为标准 EDID"的屏（已升级为选型硬门） | 视屏而定 | 待定 |
 | ③ | 换 **SPI 小屏 + MCU 直驱**（不做 HDMI 兼容协商） | 10–30 元 | 与 ESP32 备选配套 |
@@ -85,7 +86,7 @@ git status --short
 1. **不能用 `modetest` 运行期换模式**：`modetest -M sunxi-drm -s 146@99:<mode>` 会让 SSH 会话断开并**使板子崩溃重启**（实测两次）。→ 换模式只能改内核命令行、**开机时生效**。
 2. **不能靠 EDID 覆盖强制时序**：本内核 `drm_kms_helper` **没有 `edid_firmware` 参数**（功能未编入），自制 EDID 无法加载；`video=` 也不会覆盖 EDID 首选模式（只作为 `userdef` 额外模式存在）。
 
-→ 因此**显示适配手段只剩**：换屏、改走 DP 路线、或由 MCU 直驱 SPI 屏。
+→ 因此**未经实测的显示适配手段只剩**：改走 DP 路线、试 DVI 信令（见 §2.6，未实测）、换屏、或由 MCU 直驱 SPI 屏。
 
 ### 2.4 四项判据（回归用）
 
@@ -109,6 +110,26 @@ pwsh -File 'E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\verify-displa
 2. 回填 `docs/ORANGE_PI_BRINGUP_WORKSHEET.md`（`OPZ-B01`/`OPZ-D01`）与 `docs/PROJECT_BASELINE.md` 事实表；
 3. 更新 `docs/TECHNICAL_DEBT.md` 对应条目（证据 + 关闭条件）；
 4. **分阶段提交**并推送；需要时更新基线 tag。
+
+### 2.6 免费实验（提案·**未实测**）：命令行强制 DVI 信令 `D`
+
+**动机**：板端像素时序与 PC 完全一致（CRTC `480x800: 60 34860 480 500 510 700 800 801 803 830` = EDID 首选 DTD，`34860` kHz），PC 能出图而板子不能 → 差异只剩**信息帧**（`VIC 0` + `hdmi14 vsif`）与 **TMDS 信号裕量**两处。强制 DVI 信令**只去掉信息帧**，所以本实验能把这两条根因**二选一**。
+
+**做法**（只改命令行、开机生效，不碰会崩的 `modetest`）：
+
+1. 先取基线日志：`dmesg | grep -iE 'hdmi|vic|vsif' | tail -30`
+2. 编辑 `/boot/armbianEnv.txt`，把 `video=HDMI-A-1:800x480@60` 改成 `video=HDMI-A-1:480x800@60D`
+3. 重启后取同样日志，并看屏、`ls /dev/fb*`
+
+**判读（关键，不要跳过）**：
+
+| 结果 | 结论 |
+|---|---|
+| 日志里 `select vic 0 use hdmi14 vsif` **消失/改变**，屏出图 | 根因 = 信息帧不兼容；ADR-064 增选项 ⓪，转接头与换屏都可能省掉 |
+| 日志**不变**、屏仍不出图 | **驱动忽略 `D`**（与已实测的"忽略 DRM `force`"一致）→ 本次**无效**，不可据此否定信息帧假设 |
+| 日志变了、屏仍不出图 | 信息帧假设被削弱 → 更可能是 TMDS 信号裕量 → 试带均衡的 HDMI 中继/分配器 |
+
+**顺手查厂商自己的开关**（若存在，比 `video=` 更可能有效）：`ls /sys/module/*/parameters/ | grep -iE 'disp|hdmi|drm'`、`ls /sys/class/hdmi/ /sys/class/disp/ 2>/dev/null`。
 
 ---
 
