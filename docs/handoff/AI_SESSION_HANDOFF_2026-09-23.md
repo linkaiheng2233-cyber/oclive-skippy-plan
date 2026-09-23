@@ -137,6 +137,8 @@ pwsh -File 'E:\OCLive\oclive-四季宝-artifacts\bringup-toolchain\verify-displa
 
 **另一项待决策（非债务）**：2026-09-18 之前的提交历史里含本机路径/网络标识（当时未脱敏）。当前工作树已干净（本轮又修掉 `history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md` 里的学号+真名）。是否重写历史需项目所有者决定——注意重写会改变 SHA，而 `PROJECT_BASELINE.md` 已绑定 `55d10e6` 等 SHA。
 
+**新增候选决策（2026-09-23，见 `DECISIONS.md` ADR-063）**：项目所有者提出「把 Host 放到 PC、枪侧只留传感器 + ESP32 级 MCU」的桌面形态。该提案把形态拆为 **P0-A 桌面瘦客户端**（PC 作唯一 Host，可完全不用 HDMI）与 **P0-B 独立主机舱**（保留但后置），两者共享 v0.2 契约与 `perception-core`。**若被接受**：视频链（`GS-HW-002`）将不再位于关键路径，P0 主线与采购清单需同步更新。**裁决前不要**改形态、不要追加 P0-B 采购；先做提案里列的四项待办（ESP32 与 XIAO 的 FSR ADC 对比、Wi-Fi 回传丢包与 p95、形态裁决、体验复核）。
+
 ---
 
 ## 6. 工作纪律（必须遵守）
