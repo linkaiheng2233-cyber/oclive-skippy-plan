@@ -15,7 +15,7 @@
 | 根分区 UUID | `932dec6a-307e-4174-8694-c4a1ef18eef4`（与镜像一致） | `MEASURED` |
 | 镜像 | `Zero3W-已配置WiFi与诊断.img`（含 WiFi/SSH 公钥/开机诊断/`video=` 参数） | `MEASURED` |
 | **视频线** | **绿联 Mini HDMI↔HDMI**（替换首轮判定故障的随附线） | `MEASURED` |
-| 屏幕 | 3.5 英寸 HDMI IPS（型号 `UNKNOWN`；仅 HDMI + `only power` USB-C 两口） | `UNKNOWN` |
+| 屏幕 | **3.2 英寸** HDMI IPS 模块（尺寸由所有者 2026-09-23 更正，原记 3.5 英寸属误记；型号 `UNKNOWN`；仅 HDMI + `only power` USB-C 两口） | `UNKNOWN` |
 | 主机供电 | 台式数控电源 **5.00V / 限流 3A** | `MEASURED` |
 | 屏幕供电 | 5V 墙充 | `MEASURED` |
 | 板端网络 | `192.168.2.184/24`，`wlan0` MAC `10:4d:05:af:a4:06`（与首轮一致） | `MEASURED` |

@@ -25,7 +25,7 @@
 | microSD | 32GB（品牌、料号、耐久等级未记录） | `UNKNOWN` |
 | 主机供电 | 台式数控电源 **5.00V / 限流 3A**，经香蕉头→USB-C 直通线 | `MEASURED` |
 | 屏幕供电 | 5V 墙充（屏幕 USB-C 口标注 "only power"） | `MEASURED`（USB 测试仪 0.13A） |
-| 屏幕 | 3.5 英寸 HDMI IPS（型号、控制板、面板、触摸型号均未核验） | `REPORTED_RECEIVED` / `UNKNOWN` |
+| 屏幕 | **3.2 英寸** HDMI IPS 模块（尺寸由所有者 2026-09-23 更正；原记 3.5 英寸属误记。型号、控制板、面板、触摸型号均未核验） | `REPORTED_RECEIVED` / `UNKNOWN` |
 | 视频线 | Mini HDMI↔HDMI 直连线（本轮判定故障，已退货） | 判定见 §3.1 |
 | 环境温度 | 未记录 | `UNKNOWN` |
 | 仪器 | 台式数控电源、USB 电压/电流测试仪、（现场）手机拍照未留存 | — |
