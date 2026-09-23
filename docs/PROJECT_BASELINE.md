@@ -23,7 +23,7 @@
 | OCLive真实调用落地 | 接口与窄适配器保留；跨仓真实桌面接入暂缓，等待OCLive内核梳理完成 | `PAUSED_BY_OWNER` |
 | 主板 | Orange Pi Zero 3W / A733（A76+A55） | `MEASURED`：主机名`orangepizero3w`、Armbian 26.8.1 trixie（Debian 13.6）、内核 6.6.98-vendor-sun60iw2、DTB `sun60i-a733-orangepi-zero3w`；**RAM容量仍`UNKNOWN`**（未在系统内核验） |
 | 屏幕 | 3.5英寸、目标800×480横向、HDMI视频 | `REPORTED_RECEIVED`；面板原生480×800（EDID曾读出256字节，DTD像素时钟34.86MHz）；**仅HDMI与`only power`USB-C两口，疑无触摸**（`GS-HW-003`） |
-| 视频链 | Mini HDMI↔HDMI（当前）／USB-C DP Alt→主动转HDMI（备选） | **未通过**：随附Mini HDMI线DDC通道间歇失效，HPD反复跳变，接已知良好显示器仍EDID=0、无模式、无`/dev/fb0`；板卡HDMI输出与驱动已证明正常（`GS-HW-002`） |
+| 视频链 | Mini HDMI↔HDMI（当前，绿联线）／USB-C DP Alt→主动转HDMI（备选，未测） | **`MEASURED` 通过（2026-09-23 复测）**：HPD 120 秒稳定、EDID `256` 字节、模式列表 5 个（含 `480x800`/`800x480`）、`enabled` + `/dev/fb0`（fbcon 已绑定）。首轮判定的"随附线缆 DDC 故障"被证实并由换线解决（`GS-HW-002` 关闭）。**遗留**：面板原生 480×800 竖屏，横向 800×480 待用 `fbcon=rotate`/renderer 旋转落地（`GS-HW-005`） |
 | 主机系统与远程通道 | Armbian + WiFi + SSH | `MEASURED`：WiFi 已连接（5GHz 信道 44）、`wlan0` 取得内网地址、免密公钥 SSH 可用、开机自诊断服务已落地——**后续调试不必重烧卡**（SSID/内网地址/MAC 见仓库外工件 `bringup-toolchain/network-identifiers.txt`） |
 | 主机台架供电 | 台式数控电源 5.00V / 限流3A | `MEASURED`：冷启动峰值≈0.8A → 稳态0.36–0.41A（≈1.8–2.1W）；限流设0.5A会导致启动欠压停机 |
 | 主机散热 | 散热片 + 温控2-PIN风扇 | `MEASURED`：8个thermal zone 40.5–46.1°C，10分钟温度平台化，风扇在温度稳定时停转 |
@@ -108,7 +108,8 @@ PNG/HUD属于P0。语音、相机、Live2D、余弹和更多节点不是P0完成
 
 首轮 bring-up（2026-09-11）已把"主板单独上电与系统"这一步走通，并额外建立了WiFi与免密SSH远程通道。当前第一步因此收敛为：
 
-1. **换用质量合格的同规格 Mini HDMI↔HDMI 线后复测视频链**，四项判据全部通过才算视频链关闭：HPD连续2分钟稳定、EDID非0字节、出现屏幕真实分辨率、`enabled`与`/dev/fb0`存在（`GS-HW-002`）。
+1. ~~**换用质量合格的同规格 Mini HDMI↔HDMI 线后复测视频链**~~ ✅ **已于 2026-09-23 完成**：四项判据全部通过，`GS-HW-002` 关闭，证据见 `test-worksheets/runs/2026-09-23-zero3w-display-link-retest.md`。
+2. **把显示落到横向 800×480**：面板原生为竖屏，需 `fbcon=rotate`（控制台）与 renderer 旋转（未来 UI），并做一次视觉复核（`GS-HW-005`）。
 2. **补齐板卡与配件身份**：`free -m`核验RAM容量、microSD料号、屏幕型号与环境温度，回填`ORANGE_PI_BRINGUP_WORKSHEET.md`（`GS-HW-004`）。
 3. **确认触摸能力**：当前屏幕疑无触摸接口；若确认不支持，按`DISPLAY_SELECTION.md`换屏后重测`OPZ-D02`（`GS-HW-003`）。
 4. 视频链与触摸通过后，再进入Host与最低UI（`OPZ-E01`/`OPZ-V01`序列）。
