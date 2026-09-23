@@ -69,6 +69,8 @@ git status --short
 
 **根因判定**：驱动日志 `sunxi hdmi select vic 0 use hdmi14 vsif` —— 480×800 属**非 CEA 模式**，走 HDMI 1.4 厂商专用信息帧；该屏的 HDMI 接收端对此组合不兼容。另：该屏 EDID 为克隆 EDID（名 `HDMI480x800HH`，DTD 图像尺寸字段为垃圾值）。
 
+**补充证据（2026-09-23 晚，已解码整份 EDID）**：从 PC 注册表恢复这块屏的完整 256 字节 EDID（`...\bringup-toolchain\edid-panel-480x800-actual.bin`，前 32 字节与板端读取逐字节一致、两段校验和合法），解码结果（`edid-panel-480x800-decoded.txt`）：厂商码是 **Lenovo `LEN`/`0x1086`、2011 年第 34 周**，名称占位 `HDMI480x800HH`，尺寸字段三处互相矛盾，范围限制（H 28–40 kHz）与自身首选模式（行频 **49.8 kHz**）矛盾，CEA 扩展**声明 7 个 native DTD 却 0 个有效**（垃圾填充 → 对应驱动 5 次 `pixel clock[0KHz] invalid`），SVD 只有 **`VIC 0`**（未声明任何标准 CEA 模式），却又带 HDMI VSDB（OUI `000C03`）自称 HDMI 1.4 接收端。→ 该 EDID 是手工拼装的克隆件；**"必须能当通用 HDMI 接收端用"这条硬门必须保留**。注意：**EDID 里查不到"能否接受 DVI 信令"**，那只能靠 §2.6 的实验或面板驱动板主控芯片型号（丝印）判定。
+
 **已决定（ADR-064）**：判定为**屏侧**问题，**不更换主板**；按以下顺序处理：
 
 | 顺序 | 方案 | 成本 | 状态 |

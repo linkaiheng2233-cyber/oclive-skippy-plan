@@ -826,6 +826,7 @@ P0-A 直接解除的既有阻塞：随附 Mini HDMI 线的 DDC 故障（`GS-HW-0
 - 板端链路参数全部正常：HPD 稳定、驱动内部成功解析 EDID（`drm get edid support modes: 5`）、按屏原生时序设置 `480*800`、`hdmi drv has been enable!`、CRTC 与平面在扫描输出、`/dev/fb0` 与 fbcon 就绪；
 - 同一块屏在 **PC** 上可正常显示桌面；
 - 驱动日志 `sunxi hdmi select vic 0 use hdmi14 vsif` 表明 480×800 属**非 CEA 模式**，走 HDMI 1.4 厂商专用信息帧；
+- **面板 EDID 完整解码（2026-09-23 晚从 PC 注册表恢复 256 字节；前 32 字节与板端读取逐字节一致，两段校验和均合法）**：该 EDID 是**手工拼装的克隆件**——厂商码 `LEN`（Lenovo）、产品 `0x1086`、2011 年第 34 周、EDID 1.3、名称占位 `HDMI480x800HH`；范围限制声明 H 28–40 kHz，却与自身首选模式矛盾（34.86 MHz / 700 = **49.8 kHz** 行频）；CEA 扩展声明 **7 个 native DTD 而 DTD 区无一个有效**（垃圾填充，正对应驱动那 5 次 `pixel clock[0KHz] invalid`）；SVD 列表只有 **`VIC 0`**（未声明任何标准 CEA 模式）；同时它又带 HDMI VSDB（OUI `000C03`）自称 HDMI 1.4 接收端。→ 这不是一份自洽的标准 EDID，"屏必须能作为通用 HDMI 接收端工作"这条硬门必须保留。证据见 `test-worksheets/runs/2026-09-23-zero3w-panel-no-image.md` §5.1；
 - 因此故障不在板卡 HDMI 驱动、不在绿联线缆（两者已由 EDID/HPD/模式设置与 PC 交叉使用侧面验证），而在屏的 HDMI 接收端对该信号组合的兼容性。
 
 **本 ADR 的三项决定**：
