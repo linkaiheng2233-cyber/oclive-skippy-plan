@@ -6,7 +6,7 @@
 
 - `四季宝-人类阅读版.txt`：面向项目所有者，说明产品是什么、为什么这样设计、当前路线和实测方法。
 - `四季宝-智能战术配件系统-ai阅读版.txt`：面向后续 AI/开发者，保存更完整的背景、约束、接口、决策和接手上下文。
-- `AI_SESSION_HANDOFF_2026-09-23.md`：**跨会话 AI 交接**（最新一份）。含接手第一步、当前 P0 阻塞（视频链）复测方法与分诊、环境与访问（代理/SSH/工件路径）、已确立硬件事实、开放项清单、纪律摘要与踩坑清单。**新会话接手请先读这一份。**
+- `AI_SESSION_HANDOFF_2026-09-23.md`：**跨会话 AI 交接**（最新一份）。含接手第一步、显示现状（**视频链已通、当前屏在板端不出图**）与复测/分诊方法、环境与访问（代理/SSH/工件路径）、已确立硬件事实、开放项清单、纪律摘要与踩坑清单。**新会话接手请先读这一份。**
 
 ## 阅读顺序
 
@@ -61,10 +61,10 @@
 
 ## 仓库状态
 
-本目录所在仓库已经是独立本地 Git 仓库，目前未配置远端。将来需要在线协作时，先按`../TECHNICAL_DEBT.md`的 GS-CI-001 冻结 OCLive 依赖获取方式，再绑定远端和 CI；不需要再次从 OCLive 主仓拆目录。
+本目录所在仓库已经是独立本地 Git 仓库，并已配置公开远端 `origin`（`linkaiheng2233-cyber/oclive-skippy-plan`，MIT）与基线 tag；**CI 仍未启用**——需先按`../TECHNICAL_DEBT.md`的 GS-CI-001 冻结 OCLive 依赖获取方式，再绑定 CI。
 
 截至2026-09-18，本仓已完成可重复的桌面半闭环：双节点`SensorObservation → PerceptionState → DeviceEvent → typed sensor request → desktop fixture RoleCue → Output Arbiter → ScreenViewModel`，并通过100轮生命周期测试。兄弟OCLive已增加类型化sensor回合来源和副作用隔离，本仓已有真实窄适配器；默认CLI仍保留确定性desktop fixture。
 
-硬件侧于2026-09-11完成**首轮 bring-up**：Zero 3W 主机系统冷启动稳定（峰值≈0.8A→稳态0.36–0.41A@5V）、温度10分钟平台化（40.5–46.1°C）、WiFi（5GHz）与免密 SSH 远程通道可用、开机自诊断服务落地、显示驱动软件链验证通过（EDID曾读出、模式480×800、`/dev/fb0`建立）。**视频链未通过**：随附 Mini HDMI↔HDMI 线 DDC 通道间歇失效（接已知良好显示器仍 EDID=0、无模式），已换线待复测；屏幕疑无触摸接口。逐件身份核验（RAM容量、microSD料号、屏幕型号、环境温度）与两个 XIAO 节点测试均未开始。当前禁止在身份未核验前组合上电。证据见`../test-worksheets/runs/2026-09-11-zero3w-first-bringup.md`，开放项见`../TECHNICAL_DEBT.md`的 GS-HW-002/003/004、GS-DEV-001、GS-DOC-002。
+硬件侧于2026-09-11完成**首轮 bring-up**：Zero 3W 主机系统冷启动稳定（峰值≈0.8A→稳态0.36–0.41A@5V）、温度10分钟平台化（40.5–46.1°C）、WiFi（5GHz）与免密 SSH 远程通道可用、开机自诊断服务落地、显示驱动软件链验证通过（EDID曾读出、模式480×800、`/dev/fb0`建立）。**2026-09-23 复测：视频链通过**——首轮随附 Mini HDMI↔HDMI 线 DDC 间歇失效（接已知良好显示器仍 EDID=0、无模式）已由换绿联线解决，四项判据全通（HPD 稳定、EDID 256 字节、5 个模式、`/dev/fb0`），`GS-HW-002` 关闭；但**当前 3.5 英寸屏在板端仍不出图**（只有一条竖线，判定为屏侧 HDMI 兼容性 `GS-HW-005`，对策见 ADR-064：先验证 USB-C DP→HDMI 主动转接，再考虑换屏或 SPI 小屏）；屏幕疑无触摸接口。逐件身份核验（RAM容量、microSD料号、屏幕型号、环境温度）与两个 XIAO 节点测试均未开始。当前禁止在身份未核验前组合上电。证据见`../test-worksheets/runs/`的三份记录（`2026-09-11-zero3w-first-bringup.md` 首轮、`2026-09-23-zero3w-display-link-retest.md` 视频链复测、`2026-09-23-zero3w-panel-no-image.md` 屏不出图），开放项见`../TECHNICAL_DEBT.md`的 GS-HW-003/004/005/006、GS-DEV-001、GS-CI-001。
 
 本地模型仍按约3B、1.5–1.7B和0.5–0.6B三个尺寸档作为可失败角色表达候选。OCLive真实桌面接入暂缓，等待内核梳理完成；四季宝当前继续独立推进硬件基线、节点契约、显示/电源/热和本地状态链。P1+余弹融合只完成设计记录，不改变当前P0顺序。详见AI阅读版17.71–17.77、`../PROJECT_BASELINE.md`、`../ROADMAP.md` S1–S4/S6和`../TECHNICAL_DEBT.md`。
