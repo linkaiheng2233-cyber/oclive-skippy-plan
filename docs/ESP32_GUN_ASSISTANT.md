@@ -134,6 +134,12 @@
 
 ### 9.3 仍待定
 
+0. **形态前置工程项（契约侧硬阻塞，已核验代码，必须先做）**：现内核**在结构上无法表达「一块板承担全部感知」**——
+   - `PerceptionProfile::try_new(front_node_uid, rear_node_uid, …)`（`perception-core/src/reducer/profile.rs:113`）**强制两个不同** `NodeUid`，相同即返回 `ProfileError::DuplicateNodeBinding`；
+   - `NodeRole` 是 `perception-core/src/reducer.rs:51` 的**私有两值枚举**（`Front`/`Rear`），`node_role()` 按 UID 硬分派，`(role, observation)` 绑定表是**白名单**（`reducer.rs:495–522`）：`CapabilityNotBound` 会直接拒绝越界组合；
+   - 因此一块 ESP32 **不能同时**上报前握接触 + 后握接触 + 姿态估计 + 扳机触点。
+   **两条出路**：**(A，推荐) 把「两个固定角色」泛化为「节点 → 能力集映射」**，reducer 按能力而非固定角色分派（同时落地能力协商，与下面第 4 项合并做）；**(B) 让 ESP32 冒充两个虚拟 `node_uid`**——伪造拓扑、破坏诊断，不推荐。
+   这一项**不需要任何硬件**，可在桌面用模拟器完成，建议在本形态动硬件之前先落地。已记入 `TECHNICAL_DEBT.md` 的 `GS-ARCH-001`。
 1. **换弹检测方式**：霍尔/干簧（非接触、需防磁干扰）还是微动（接触式、占空间）？决定机械改装量与是否开新 ADR。离线预设可先本地判定；**联机自由模式必须走新契约版本 / 能力协商**，不得塞进 P0 v0.2 闭集。
 2. **屏尺寸与分辨率**：2.0"/2.4" 240×320 起步；分辨率越高，素材容量与刷新带宽压力越大，且受导轨支架尺寸约束。
 3. **素材容量与生成管线**：16 MB Flash 已够（现算约 **5.2 MB**：固件 ~1.5 + 中文常用 3500 字 24×24 约 0.25 + 20 个表情约 1.6 + 30 句 3 s 语音约 1.44），余量约 3 倍，尚可容纳双槽 OTA；需定表情数量与字库范围，并建**主机侧导出素材包**的工具链。**预设语音必须用主机同一套 TTS 预渲染**，否则玩家会听到「两个声音」。
@@ -143,4 +149,5 @@
    - ADR-063 由 `CANDIDATE` 升为 `ACCEPTED`；
    - **改 `AGENTS.md`**：现文写死「三轴一体式显示主机舱 + 前下导轨 / 后握把两个 BLE 节点 + 三个电源域」，不改则后续 session 会继续按旧架构施工；
    - 同步 `PROJECT_BASELINE.md`、`HARDWARE_IMPLEMENTATION_PLAN.md`、`test-worksheets/采购核对清单.md`、`ROADMAP.md` 的对应条目。
+7. **表达侧（下行）类型尚未落地**：`contracts` 目前只有上行侧（`SensorObservation` / `PerceptionState` / `DeviceEvent`）与 `Capability` 语义校验，**没有任何表达侧类型**——`AssetRef`、表达指令、模式（自由 / 预设）、能力协商 / hello 全部只存在于文档（`64A-R1` 等），尚未进 Rust 真源。这是第 4 项要补的主体，也是本形态能否「换主机不改枪」的前提。
 
