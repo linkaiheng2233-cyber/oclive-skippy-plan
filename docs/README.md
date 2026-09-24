@@ -45,6 +45,7 @@
 | `UX_RESEARCH.md` | 只复核既有体验决定的轻量玩家问题 |
 | `FRONTEND_DESIGN_BRIEF.md` | 800×480界面信息架构与首批状态稿 |
 | `handoff/README.md` | 人类总览、AI交接文档及跨会话入口 |
+| `ESP32_GUN_ASSISTANT.md` | **枪上轻量助手形态**（枪上只留一块 ESP32-S3 + 小屏、自由/预设双模式、上下行契约边界、预设触发范围、BOM 与重量）；随 ADR-063 的 PC 主机形态，状态 `CANDIDATE` |
 
 ## 4. 架构、契约与软件
 
