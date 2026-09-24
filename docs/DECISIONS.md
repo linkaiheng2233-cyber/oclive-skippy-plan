@@ -849,3 +849,44 @@ P0-A 直接解除的既有阻塞：随附 Mini HDMI 线的 DDC 故障（`GS-HW-0
 **证据与限制**：显示器交叉测试（板子 → PC 显示器、同一根绿联线）的结论目前为**项目所有者报告**，尚未由本会话独立复核；它不影响"换屏"决定的成立（屏在 PC 端可用、板端不可用这一对照本身已足够），但补做该测试可把责任划分做得更严密。运行记录见 `test-worksheets/runs/2026-09-23-zero3w-display-link-retest.md` 与 `test-worksheets/runs/2026-09-23-zero3w-panel-no-image.md`。
 
 原因：把"板卡输出正常"与"屏能作为通用接收端工作"分成两个独立门，可以避免用更换主板的代价去解决一个屏侧兼容问题；同时保留 DP 与 SPI 两条不依赖 HDMI 兼容协商的显示路径，让显示不再成为单点阻塞。
+
+## ADR-065：感知内核的节点模型泛化为「节点 → 能力集映射」（方向冻结，落地待 ADR-063 裁决）
+
+状态：ACCEPTED（2026-09-23：**方向与约束已冻结**；**代码未动**——落地以 ADR-063 的形态裁决为前置，落地前 `GS-ARCH-001` 保持 `OPEN`）
+
+**问题（2026-09-23 静态核验，非推测）**：现行内核把「两个固定角色」写死在结构里，任何「一块板承担全部感知」的形态在**构造阶段**就被拒绝：
+
+| 位置 | 事实 | 后果 |
+|---|---|---|
+| `perception-core/src/reducer/profile.rs:113` | `PerceptionProfile::try_new(front_node_uid, rear_node_uid, …)` **强制两个不同** `NodeUid`，相同即 `ProfileError::DuplicateNodeBinding` | 单节点无法构造 profile |
+| `reducer.rs:51` | `NodeRole` 是**私有两值枚举**（`Front`/`Rear`），`node_role()`（`reducer.rs:255`）按 UID 硬分派 | 角色是写死的，不是声明出来的 |
+| `reducer.rs:495–522` | `(role, observation)` 绑定表是**白名单**，越界返回 `CapabilityNotBound` | 一块节点不能同时上报前握接触 + 后握接触 + 姿态 + 扳机触点 |
+
+**决定**：把 `PerceptionProfile` 从「两个必需且互不相同的 `NodeUid`」泛化为**「节点 → 能力集映射」**（`node_uid → 若干 `Capability`），`node_role()` / `session()` / `session_mut()` / `clear_node()` / `store_observation()` 一律按**能力**而非固定角色分派。`Capability` 沿用 `contracts` 既有枚举（`lib.rs:234`：`FrontGrip`/`RearGrip`/`Motion`/`Orientation`/`PrimaryControl`/`ShockDiagnostic`），**不新增语义**。
+
+**三条硬约束**（落地时必须同时满足）：
+
+1. **不做单节点专用分支**。泛化必须对任意节点数成立；若最终仍是一块板，它只是「能力集恰好覆盖全部」的一个实例。
+2. **双节点形态零语义变更**。P0 现行两节点拓扑在泛化后必须产出逐字节相同的 `PerceptionState` 与边沿，既有回放/降级测试不得修改判据。
+3. **不接受「一块节点冒充两个 `node_uid`」**。这会在诊断、`NodeHealth` 与注册/信任语义上伪造拓扑；宁可改内核，不伪造来源。
+
+**为什么不需要新契约版本**：`PerceptionProfile` 属 `perception-core`，**不在 v0.2 消息内**；`SensorObservation.node_uid` 与 `Capability` 枚举已在 `contracts` 且语义不变 → **不改消息字段、不改 `schemas/`、不触碰零漂移门**。这与「协议变更先改 contracts」的纪律不冲突：本次没有协议变更。
+
+**不在本 ADR 范围内的两项**（仍须新契约版本 + 能力协商，等形态裁决）：① 能力协商 / hello（节点声明自身能力集）；② 表达侧（下行）类型——`AssetRef`、表达指令、模式（自由/预设）。现状是 `contracts` **一个表达侧类型都没有**，`64A-R1` 仅存在于文档。
+
+**落地待办（ADR-063 形态裁决后执行）**：
+
+1. `perception-core`：`profile.rs` + `reducer.rs` + `reducer/tests.rs`；
+2. `host` 与 `bin/simulator` 的全部 profile 构造点；
+3. fixtures 与回放/降级测试同步；
+4. 跑完整 `./scripts/verify.ps1`（含 Schema 零漂移门）；
+5. 关闭 `GS-ARCH-001`；
+6. 若采用单节点形态，同步改 `AGENTS.md`（现文写死双节点与三电源域）。
+
+**为什么只冻结方向、不立刻改代码（所有者 2026-09-23 决定）**：本 ADR 的收益只在单节点形态被采纳后才兑现；在 `CANDIDATE` 形态上先动核心 API，会产生与形态无关的重构风险与回归面。冻结方向与约束，让硬件侧的形态裁决有一个明确接口可依，是风险最小的顺序。
+
+**成本估算**：桌面侧约 **1–2 天**（`ESTIMATED`，含 host/simulator 调用点与测试同步，不含硬件）。不需要任何硬件，可在模拟器上完成。
+
+**证据**：`crates/ailive-gun-spirit-perception-core/src/reducer/profile.rs`、`reducer.rs`、`crates/ailive-gun-spirit-contracts/src/lib.rs`；台账 `TECHNICAL_DEBT.md` 的 `GS-ARCH-001`；形态侧 `ESP32_GUN_ASSISTANT.md` §9.3 第 0 项。
+
+原因：把「有几个节点、各自负责什么」从写死的结构变成**数据**，是「三节点 → 一节点」这类拓扑变更能够通过改配置而不是改内核来实现的唯一途径；同时它让 `Capability` 从"仅用于校验的枚举"变成真正承载节点声明的载体，为后续能力协商留出同一处扩展点。
