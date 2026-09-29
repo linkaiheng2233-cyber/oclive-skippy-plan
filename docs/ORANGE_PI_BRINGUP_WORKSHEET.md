@@ -15,27 +15,27 @@
 
 ## 2. 实物与软件身份
 
-| 项目 | 实测填写（2026-09-11 首轮，`UNKNOWN` 表示尚未核验） |
+| 项目 | 实测填写（2026-09-11 首轮 + **2026-09-29 无头 Host 上板**；`UNKNOWN` 表示尚未核验） |
 |------|----------|
-| 测试日期 / 操作者 | 2026-09-11 夜 / 项目所有者（现场）+ AI（远程） |
+| 测试日期 / 操作者 | 2026-09-11 夜（首轮 bring-up）／**2026-09-29（无头 Host 首次在真机运行）** / 项目所有者（现场接线供电）+ AI（远程构建、部署、验证） |
 | Orange Pi 型号 / PCB revision | Orange Pi Zero 3W；PCB revision `UNKNOWN` |
-| RAM 容量 | `UNKNOWN`（所有者报告 6GB，未在系统内核验；下轮 `free -m`） |
-| SoC / CPU 核心 | Allwinner A733（2×A76 + 6×A55，最高 2.0GHz，按厂商参数页） |
-| A76/A55逻辑CPU编号与频率 | `UNKNOWN`（下轮 `lscpu`） |
-| 屏幕商品与 revision | `UNKNOWN`；面板原生 480×800，EDID 曾读出 256 字节（DTD 像素时钟 34.86MHz，HTOTAL 700/VTOTAL 830） |
-| USB-C DP主动转HDMI芯片/商品/revision | 本轮未使用（走 Mini HDMI）；`UNKNOWN` |
-| HDMI短线/转接 | Mini HDMI↔HDMI 直连线（随屏幕附带）；**判定 DDC 通道故障，已退货换线** |
-| USB 触摸控制器 | 无触摸接口（屏幕仅 HDMI + `only power` USB-C）→ 触摸能力待确认 |
+| RAM 容量 | **5,844 MiB ≈ 6 GB `MEASURED`**（2026-09-29 `free -m`；此前一直 `UNKNOWN`） |
+| SoC / CPU 核心 | Allwinner A733：**实测 8 核 = 6×Cortex-A55 + 2×Cortex-A76**，1 socket，`aarch64` |
+| A76/A55逻辑CPU编号与频率 | **最高 1,794 MHz / 最低 416 MHz `MEASURED`**（`lscpu`）；逐逻辑核编号与亲和仍未细分 |
+| 屏幕商品与 revision | 型号 `UNKNOWN`；**尺寸由所有者于 2026-09-23 更正为 3.2 英寸**（此前误记 3.5 英寸）；面板原生 480×800，EDID 256 字节（**克隆 EDID**，厂商码 `LEN`、名称 `HDMI480x800HH`） |
+| USB-C DP主动转HDMI芯片/商品/revision | **山泽 USB-C DP→HDMI 主动转接头**（2026-09-29 已到货并接上）；Type-C 侧协商成功（SVID `0xff01` 激活、PHY 切到 `STATE_DP_C`），但板上 `card0-DP-1` 仍 `disabled`/`unknown`、无 modes/EDID → **厂商 BSP 的 DP 输出路径未初始化**；转接芯片型号 `UNKNOWN` |
+| HDMI短线/转接 | 已换 **绿联 Mini HDMI↔HDMI 线**，四项判据全通过（`GS-HW-002` 关闭）；面板在板端仍只有一条竖线（`GS-HW-005`） |
+| USB 触摸控制器 | 无触摸接口（屏幕仅 HDMI + `only power` USB-C）→ 触摸能力待确认（`GS-HW-003`） |
 | 散热器/风扇型号、尺寸、供电 | 散热片（型号 `UNKNOWN`）+ 板载 2-PIN 温控风扇 |
-| 电源型号 / 标称输出 | 台式数控电源，实测设定 5.00V / 限流 3A；型号 `UNKNOWN` |
-| MicroSD 型号 / 容量 | 32GB；品牌与耐久等级 `UNKNOWN` |
+| 电源型号 / 标称输出 | 台式数控电源，实测设定 5.00 V / 限流 3 A；型号 `UNKNOWN`；**2026-09-29 实测稳态 0.41 A** |
+| MicroSD 型号 / 容量 | **白牌 `MEASURED`**：`name=SD`、`manfid=0x0000fe`（**非注册厂商值**）、`oemid=0x3432`、`date=11/2025`、`serial=0x14`；29 G 可用 / 已用 6%；**耐久等级仍 `UNKNOWN`** |
 | 外壳状态：裸板/假体/完整舱 | 裸板 |
-| 环境温度 | `UNKNOWN`（未记录） |
+| 环境温度 | `UNKNOWN`（未记录；板端温度另见 §5） |
 | OS 镜像 / 下载来源 / SHA-256 | `Armbian_26.8.1_Orangepizero3w_trixie_vendor_6.6.98_minimal.img.xz`（Armbian 官方源 dl.armbian.com）；SHA-256 `915054fed84758a78b09e0d5166f7e308c2185067faa77402031c6ad9366c632`（校验通过） |
 | Kernel / firmware | 6.6.98-vendor-sun60iw2（vendor 内核） |
-| OCLive revision | 本轮未接入（`PAUSED_BY_OWNER`） |
-| 四季宝 revision | `UNKNOWN`（工作树未提交；见 `TECHNICAL_DEBT.md` §1 脏工作树限制） |
-| 角色包 identity / version | 本轮未加载 |
+| **OCLive revision** | **2026-09-29 已接入并跑通**：无头 Host 在板上完成完整角色回合（mock LLM）。注意构建会一并编译兄弟仓 `oclivenewnew`，**其 revision 未被钉住**（`GS-CI-001`），故本行不可复现 |
+| **四季宝产物 revision** | `aarch64-unknown-linux-gnu` release：**25,857,760 B / 24.66 MiB**，SHA-256 `de9e58a24fe5bcf451d8a1b9c5c4fa22c34b91d9cedc3d5f0014c32aaf1dbee1`（构建报告 `tmp/aarch64-report-20260929.json`） |
+| 角色包 identity / version | `roles/default`（生成器无头烟测夹具，**非正式角色资产**）；已加载成功 |
 | llama.cpp commit / 编译选项 | 本轮未安装 |
 | 3B模型 / GGUF摘要 / 量化 | 本轮未部署 |
 
