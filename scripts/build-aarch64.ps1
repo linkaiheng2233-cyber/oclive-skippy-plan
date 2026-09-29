@@ -9,6 +9,23 @@ $ErrorActionPreference = "Stop"
 $targetTriple = "aarch64-unknown-linux-gnu"
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 
+# Get-FileHash is not resolvable in every Windows PowerShell 5.1 environment on
+# this machine (Microsoft.PowerShell.Utility fails to expose it; see
+# GS-QUALITY-002 in docs/TECHNICAL_DEBT.md), so hashing goes through .NET.
+function Get-Sha256Hex {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $bytes = $sha.ComputeHash($stream)
+    }
+    finally {
+        $stream.Dispose()
+        $sha.Dispose()
+    }
+    return ([System.BitConverter]::ToString($bytes) -replace '-', '')
+}
+
 function Resolve-Tool([string]$name) {
     if ($ToolchainBin) {
         $candidate = Join-Path $ToolchainBin ($name + ".exe")
@@ -82,7 +99,7 @@ $result = [ordered]@{
     artifact = $artifactFile.FullName
     size_bytes = $artifactFile.Length
     size_mib = [math]::Round($artifactFile.Length / 1MB, 2)
-    sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact).Hash.ToLowerInvariant()
+    sha256 = (Get-Sha256Hex -Path $artifact).ToLowerInvariant()
     elf64 = $header.Contains("Class:                             ELF64")
     machine_aarch64 = $header.Contains("Machine:                           AArch64")
     needed = @($dynamic)
