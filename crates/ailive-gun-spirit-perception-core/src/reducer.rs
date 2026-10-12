@@ -1,13 +1,15 @@
 use ailive_gun_spirit_contracts::{
     BootId, Capability, CarrierState, Contact, ContractValidate, ContractVersion, EvidenceRelation,
-    Fact, MotionClass, NodeHealth, NodeHealthState, NodeUid, PerceptionState, Permille, Pose,
-    SensorObservation, SensorObservationKind, SourceRef, UnknownReason, ValidationError,
+    Fact, GripBinding, MotionClass, NodeHealth, NodeHealthState, NodeUid, PerceptionState,
+    Permille, Pose, SensorObservation, SensorObservationKind, SourceRef, UnknownReason,
+    ValidationError,
 };
 
 mod profile;
 
 pub use profile::{
-    ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile, ProfileError,
+    CapabilitySet, ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
+    ProfileError,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,12 +47,6 @@ pub enum ReducerError {
         sequence: u64,
     },
     RevisionOverflow,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NodeRole {
-    Front,
-    Rear,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -112,8 +108,11 @@ struct ResolvedSnapshot {
 pub struct PerceptionReducer {
     host_boot_id: BootId,
     profile: PerceptionProfile,
-    front_session: NodeSession,
-    rear_session: NodeSession,
+    /// 每个已声明节点一条session，键为`node_uid`，与`profile.nodes()`同序。
+    sessions: Vec<(NodeUid, NodeSession)>,
+    /// 以下五个是**语义槽位，不是节点槽位**：`front_grip`指「前握持」这件事，
+    /// 不指「前节点」。P0-A单板形态下同一个节点会同时写前、后两个握持槽。
+    /// 这也正是`resolve_carrier`无需改动的原因——它只认这些具名语义。
     front_grip: Option<Evidence<Contact>>,
     rear_grip: Option<Evidence<Contact>>,
     motion: Option<Evidence<MotionClass>>,
@@ -126,8 +125,19 @@ pub struct PerceptionReducer {
 
 impl PerceptionReducer {
     pub fn new(host_boot_id: BootId, profile: PerceptionProfile, now_ms: u64) -> Self {
+        let sessions = profile
+            .nodes()
+            .map(|(node_uid, _)| (node_uid.clone(), NodeSession::default()))
+            .collect();
+        let node_health = profile
+            .nodes()
+            .map(|(node_uid, _)| NodeHealth {
+                node_uid: node_uid.clone(),
+                state: NodeHealthState::Offline,
+            })
+            .collect();
         let current = PerceptionState {
-            contract_version: ContractVersion::V0_2,
+            contract_version: ContractVersion::V0_3,
             host_boot_id: host_boot_id.clone(),
             revision: 0,
             produced_at_monotonic_ms: now_ms,
@@ -137,22 +147,12 @@ impl PerceptionReducer {
             motion: never_observed(),
             pose: never_observed(),
             primary_control: never_observed(),
-            node_health: vec![
-                NodeHealth {
-                    node_uid: profile.front_node_uid.clone(),
-                    state: NodeHealthState::Offline,
-                },
-                NodeHealth {
-                    node_uid: profile.rear_node_uid.clone(),
-                    state: NodeHealthState::Offline,
-                },
-            ],
+            node_health,
         };
         Self {
             host_boot_id,
             profile,
-            front_session: NodeSession::default(),
-            rear_session: NodeSession::default(),
+            sessions,
             front_grip: None,
             rear_grip: None,
             motion: None,
@@ -177,25 +177,35 @@ impl PerceptionReducer {
             .validate()
             .map_err(ReducerError::InvalidObservation)?;
         self.ensure_clock(received_at_host_monotonic_ms)?;
-        let role = self.node_role(&observation.node_uid)?;
-        let capability =
-            observation_capability(role, &observation.node_uid, &observation.observation)?;
 
-        let session = self.session(role);
-        let same_boot = session.boot_id.as_ref() == Some(&observation.boot_id);
+        let node_uid = observation.node_uid.clone();
+        // 节点必须**声明**过这个能力。能力本身是观测的函数（见`observation_capability`），
+        // 节点只负责声明自己拥有哪些能力。
+        let Some(declared) = self.profile.capabilities_of(&node_uid) else {
+            return Err(ReducerError::UnknownNode(node_uid));
+        };
+        let capability = observation_capability(&observation.observation);
+        if !declared.contains(capability) {
+            return Err(ReducerError::CapabilityNotBound {
+                node_uid,
+                capability,
+            });
+        }
+
+        let same_boot = self.session(&node_uid)?.boot_id.as_ref() == Some(&observation.boot_id);
         if same_boot {
-            if let Some(previous_sequence) = session.last_sequence {
+            if let Some(previous_sequence) = self.session(&node_uid)?.last_sequence {
                 if observation.sequence < previous_sequence {
                     return Err(ReducerError::SequenceRegressed {
-                        node_uid: observation.node_uid,
+                        node_uid,
                         previous: previous_sequence,
                         current: observation.sequence,
                     });
                 }
                 if observation.sequence == previous_sequence {
-                    if session.last_observation.as_ref() != Some(&observation) {
+                    if self.session(&node_uid)?.last_observation.as_ref() != Some(&observation) {
                         return Err(ReducerError::SequenceCollision {
-                            node_uid: observation.node_uid,
+                            node_uid,
                             sequence: observation.sequence,
                         });
                     }
@@ -207,23 +217,22 @@ impl PerceptionReducer {
                 }
             }
         } else {
-            self.clear_node(role);
+            self.clear_node(&node_uid);
         }
 
         let source_ref = SourceRef {
             observation_id: observation.observation_id.clone(),
-            node_uid: observation.node_uid.clone(),
+            node_uid: node_uid.clone(),
             capability,
             relation: EvidenceRelation::Supports,
         };
         self.store_observation(
-            role,
             &observation.observation,
             received_at_host_monotonic_ms,
             source_ref,
         );
 
-        let session = self.session_mut(role);
+        let session = self.session_mut(&node_uid)?;
         session.boot_id = Some(observation.boot_id.clone());
         session.last_sequence = Some(observation.sequence);
         session.last_observation = Some(observation);
@@ -252,49 +261,67 @@ impl PerceptionReducer {
         }
     }
 
-    fn node_role(&self, node_uid: &NodeUid) -> Result<NodeRole, ReducerError> {
-        if node_uid == &self.profile.front_node_uid {
-            Ok(NodeRole::Front)
-        } else if node_uid == &self.profile.rear_node_uid {
-            Ok(NodeRole::Rear)
-        } else {
-            Err(ReducerError::UnknownNode(node_uid.clone()))
-        }
+    /// 该节点owner的session与其离线判定。
+    ///
+    /// 返回`Option`而不是panic：无人声明该能力时`None`是**正常**情形
+    /// （profile没配这类传感器），调用方据此把对应事实解成`NeverObserved`。
+    /// 第二个`?`在profile自洽时不可达，真发生时退化为保守的`NeverObserved`，
+    /// 而不是凭空造出一个事实——感知内核的失败方向必须是"少知道"，不是"编造"。
+    fn owner_session(&self, capability: Capability, now_ms: u64) -> Option<(&NodeSession, bool)> {
+        let owner = self.profile.owners_of(capability)?;
+        let session = self
+            .sessions
+            .iter()
+            .find(|(node_uid, _)| node_uid == owner)
+            .map(|(_, session)| session)?;
+        let offline = node_is_offline(session, now_ms, self.profile.freshness.node_offline_ttl_ms);
+        Some((session, offline))
     }
 
-    fn session(&self, role: NodeRole) -> &NodeSession {
-        match role {
-            NodeRole::Front => &self.front_session,
-            NodeRole::Rear => &self.rear_session,
-        }
+    fn session(&self, node_uid: &NodeUid) -> Result<&NodeSession, ReducerError> {
+        self.sessions
+            .iter()
+            .find(|(declared, _)| declared == node_uid)
+            .map(|(_, session)| session)
+            .ok_or_else(|| ReducerError::UnknownNode(node_uid.clone()))
     }
 
-    fn session_mut(&mut self, role: NodeRole) -> &mut NodeSession {
-        match role {
-            NodeRole::Front => &mut self.front_session,
-            NodeRole::Rear => &mut self.rear_session,
-        }
+    fn session_mut(&mut self, node_uid: &NodeUid) -> Result<&mut NodeSession, ReducerError> {
+        self.sessions
+            .iter_mut()
+            .find(|(declared, _)| declared == node_uid)
+            .map(|(_, session)| session)
+            .ok_or_else(|| ReducerError::UnknownNode(node_uid.clone()))
     }
 
-    fn clear_node(&mut self, role: NodeRole) {
-        match role {
-            NodeRole::Front => {
-                self.front_session = NodeSession::default();
-                self.front_grip = None;
-                self.motion = None;
-                self.orientation = None;
-            }
-            NodeRole::Rear => {
-                self.rear_session = NodeSession::default();
-                self.rear_grip = None;
-                self.primary_control = None;
+    /// 节点重启（boot_id变化）时作废它带来的全部证据。
+    ///
+    /// 清的是**该节点名下能力**对应的槽，不再是"前节点清这几个、后节点清那几个"。
+    /// 双板形态下结果与旧实现逐项相同（见`reducer/tests.rs`的回归覆盖）。
+    fn clear_node(&mut self, node_uid: &NodeUid) {
+        if let Some((_, session)) = self.sessions.iter_mut().find(|(uid, _)| uid == node_uid) {
+            *session = NodeSession::default();
+        }
+        let declared: Vec<Capability> = self
+            .profile
+            .capabilities_of(node_uid)
+            .map(|set| set.iter().collect())
+            .unwrap_or_default();
+        for capability in declared {
+            match capability {
+                Capability::FrontGrip => self.front_grip = None,
+                Capability::RearGrip => self.rear_grip = None,
+                Capability::Motion => self.motion = None,
+                Capability::Orientation => self.orientation = None,
+                Capability::PrimaryControl => self.primary_control = None,
+                // ShockObserved 本来就不落证据槽（见store_observation）
+                Capability::ShockDiagnostic => {}
             }
         }
     }
 
     fn store_observation(
         &mut self,
-        role: NodeRole,
         observation: &SensorObservationKind,
         received_at_ms: u64,
         source_ref: SourceRef,
@@ -302,6 +329,7 @@ impl PerceptionReducer {
         let source_refs = vec![source_ref];
         match observation {
             SensorObservationKind::GripContact {
+                grip,
                 contact,
                 strength_milli,
             } => {
@@ -317,9 +345,11 @@ impl PerceptionReducer {
                     confidence_milli,
                     source_refs,
                 };
-                match role {
-                    NodeRole::Front => self.front_grip = Some(evidence),
-                    NodeRole::Rear => self.rear_grip = Some(evidence),
+                // 判别来自**载荷自身**，不再来自"哪个节点发的"。
+                // 这正是单板形态成立的前提：一个节点可以同时报前握和后握。
+                match grip {
+                    GripBinding::Front => self.front_grip = Some(evidence),
+                    GripBinding::Rear => self.rear_grip = Some(evidence),
                 }
             }
             SensorObservationKind::MotionClass { motion } => {
@@ -404,47 +434,44 @@ impl PerceptionReducer {
     }
 
     fn resolve(&mut self, now_ms: u64) -> ResolvedSnapshot {
-        let front_offline = node_is_offline(
-            &self.front_session,
-            now_ms,
-            self.profile.freshness.node_offline_ttl_ms,
-        );
-        let rear_offline = node_is_offline(
-            &self.rear_session,
-            now_ms,
-            self.profile.freshness.node_offline_ttl_ms,
-        );
-        let front_grip = resolve_evidence(
-            self.front_grip.as_ref(),
-            &self.front_session,
-            front_offline,
-            now_ms,
-        );
-        let rear_grip = resolve_evidence(
-            self.rear_grip.as_ref(),
-            &self.rear_session,
-            rear_offline,
-            now_ms,
-        );
-        let motion = resolve_evidence(
-            self.motion.as_ref(),
-            &self.front_session,
-            front_offline,
-            now_ms,
-        );
-        let pose = resolve_pose(
-            self.orientation.as_ref(),
-            &self.front_session,
-            front_offline,
-            now_ms,
-            self.profile.orientation.as_ref(),
-        );
-        let primary_control = resolve_evidence(
-            self.primary_control.as_ref(),
-            &self.rear_session,
-            rear_offline,
-            now_ms,
-        );
+        // 每个语义槽位问一次「谁声明了这个能力」，不再写死"前节点管这些、后节点管那些"。
+        // 双板形态下 owner(FrontGrip)=front-node、owner(Motion)=front-node、
+        // owner(PrimaryControl)=rear-node，取值与旧实现逐项相同。
+        // 无人声明该能力是**正常**情形（profile没配这类传感器），解成NeverObserved。
+        let front_grip = match self.owner_session(Capability::FrontGrip, now_ms) {
+            Some((session, offline)) => {
+                resolve_evidence(self.front_grip.as_ref(), session, offline, now_ms)
+            }
+            None => Resolved::Unknown(UnknownReason::NeverObserved),
+        };
+        let rear_grip = match self.owner_session(Capability::RearGrip, now_ms) {
+            Some((session, offline)) => {
+                resolve_evidence(self.rear_grip.as_ref(), session, offline, now_ms)
+            }
+            None => Resolved::Unknown(UnknownReason::NeverObserved),
+        };
+        let motion = match self.owner_session(Capability::Motion, now_ms) {
+            Some((session, offline)) => {
+                resolve_evidence(self.motion.as_ref(), session, offline, now_ms)
+            }
+            None => Resolved::Unknown(UnknownReason::NeverObserved),
+        };
+        let pose = match self.owner_session(Capability::Orientation, now_ms) {
+            Some((session, offline)) => resolve_pose(
+                self.orientation.as_ref(),
+                session,
+                offline,
+                now_ms,
+                self.profile.orientation.as_ref(),
+            ),
+            None => Resolved::Unknown(UnknownReason::NeverObserved),
+        };
+        let primary_control = match self.owner_session(Capability::PrimaryControl, now_ms) {
+            Some((session, offline)) => {
+                resolve_evidence(self.primary_control.as_ref(), session, offline, now_ms)
+            }
+            None => Resolved::Unknown(UnknownReason::NeverObserved),
+        };
         let carrier_state = resolve_carrier(
             &front_grip,
             &rear_grip,
@@ -457,6 +484,24 @@ impl PerceptionReducer {
             self.profile.confidence,
         );
 
+        // node_health 按 profile 排定（字典序）的节点顺序渲染，与 sessions 同序。
+        let node_health = self
+            .sessions
+            .iter()
+            .map(|(node_uid, session)| NodeHealth {
+                node_uid: node_uid.clone(),
+                state: if node_is_offline(
+                    session,
+                    now_ms,
+                    self.profile.freshness.node_offline_ttl_ms,
+                ) {
+                    NodeHealthState::Offline
+                } else {
+                    NodeHealthState::Healthy
+                },
+            })
+            .collect();
+
         ResolvedSnapshot {
             carrier_state,
             front_grip,
@@ -464,64 +509,31 @@ impl PerceptionReducer {
             motion,
             pose,
             primary_control,
-            node_health: vec![
-                NodeHealth {
-                    node_uid: self.profile.front_node_uid.clone(),
-                    state: if front_offline {
-                        NodeHealthState::Offline
-                    } else {
-                        NodeHealthState::Healthy
-                    },
-                },
-                NodeHealth {
-                    node_uid: self.profile.rear_node_uid.clone(),
-                    state: if rear_offline {
-                        NodeHealthState::Offline
-                    } else {
-                        NodeHealthState::Healthy
-                    },
-                },
-            ],
+            node_health,
         }
     }
 }
 
-fn observation_capability(
-    role: NodeRole,
-    node_uid: &NodeUid,
-    observation: &SensorObservationKind,
-) -> Result<Capability, ReducerError> {
-    let capability = match (role, observation) {
-        (NodeRole::Front, SensorObservationKind::GripContact { .. }) => Capability::FrontGrip,
-        (NodeRole::Rear, SensorObservationKind::GripContact { .. }) => Capability::RearGrip,
-        (NodeRole::Front, SensorObservationKind::MotionClass { .. }) => Capability::Motion,
-        (NodeRole::Front, SensorObservationKind::OrientationEstimate { .. }) => {
-            Capability::Orientation
-        }
-        (NodeRole::Rear, SensorObservationKind::AuxControlContact { .. }) => {
-            Capability::PrimaryControl
-        }
-        (NodeRole::Front, SensorObservationKind::ShockObserved { .. }) => {
-            Capability::ShockDiagnostic
-        }
-        (NodeRole::Front, _) | (NodeRole::Rear, _) => {
-            let capability = match observation {
-                SensorObservationKind::GripContact { .. } => match role {
-                    NodeRole::Front => Capability::FrontGrip,
-                    NodeRole::Rear => Capability::RearGrip,
-                },
-                SensorObservationKind::MotionClass { .. } => Capability::Motion,
-                SensorObservationKind::OrientationEstimate { .. } => Capability::Orientation,
-                SensorObservationKind::AuxControlContact { .. } => Capability::PrimaryControl,
-                SensorObservationKind::ShockObserved { .. } => Capability::ShockDiagnostic,
-            };
-            return Err(ReducerError::CapabilityNotBound {
-                node_uid: node_uid.clone(),
-                capability,
-            });
-        }
-    };
-    Ok(capability)
+/// 观察→能力的映射，**纯粹是观测自身的函数**：不含节点、不含角色、不返回`Result`。
+///
+/// 这是本次泛化做对了的标志——旧版签名是
+/// `(role: NodeRole, node_uid, observation) -> Result<Capability, _>`，
+/// 因为`GripContact`没有判别字段、只能靠"哪个节点发的"来区分前握与后握。
+/// 判别字段进契约后，这个参数就彻底消失了。
+///
+/// 至于"这个节点有没有资格上报该能力"，由`PerceptionProfile`在`ingest`里判定
+/// （`CapabilityNotBound`），不由本函数判定。
+fn observation_capability(observation: &SensorObservationKind) -> Capability {
+    match observation {
+        SensorObservationKind::GripContact { grip, .. } => match grip {
+            GripBinding::Front => Capability::FrontGrip,
+            GripBinding::Rear => Capability::RearGrip,
+        },
+        SensorObservationKind::MotionClass { .. } => Capability::Motion,
+        SensorObservationKind::OrientationEstimate { .. } => Capability::Orientation,
+        SensorObservationKind::AuxControlContact { .. } => Capability::PrimaryControl,
+        SensorObservationKind::ShockObserved { .. } => Capability::ShockDiagnostic,
+    }
 }
 
 fn resolve_evidence<T: Clone>(
@@ -818,7 +830,7 @@ fn render_snapshot(
     previous: &PerceptionState,
 ) -> PerceptionState {
     PerceptionState {
-        contract_version: ContractVersion::V0_2,
+        contract_version: ContractVersion::V0_3,
         host_boot_id: host_boot_id.clone(),
         revision,
         produced_at_monotonic_ms: now_ms,

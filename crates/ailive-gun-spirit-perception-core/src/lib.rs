@@ -6,7 +6,7 @@
 mod reducer;
 
 pub use reducer::{
-    ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
+    CapabilitySet, ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
     PerceptionReducer, ProfileError, ReducerError, ReductionDisposition, ReductionOutput,
 };
 
@@ -185,7 +185,7 @@ mod tests {
         control: Fact<Contact>,
     ) -> PerceptionState {
         PerceptionState {
-            contract_version: ContractVersion::V0_2,
+            contract_version: ContractVersion::V0_3,
             host_boot_id: BootId::try_new("host-boot-test").unwrap(),
             revision,
             produced_at_monotonic_ms: 100,
