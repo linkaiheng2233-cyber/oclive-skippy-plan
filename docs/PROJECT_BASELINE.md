@@ -4,7 +4,16 @@
 **前一基线**：`GS-P0-BL-2026-09-22`（文档权威收敛；硬件结论未变）  
 **状态**：ACCEPTED / **主线形态已切换为 P0-A「PC 宿主 + 枪侧瘦客户端」**（ADR-063 升为 `ACCEPTED`）。硬件事实**未变**：首轮 bring-up 的系统、网络与远程通道结论，以及 2026-09-23 视频链四项判据全部通过，均保持有效。面板在板端不出图（屏侧 HDMI 兼容性，ADR-064）与触摸未确认仍是开放项，但**已移出关键路径**——P0-A 不依赖板端 HDMI/DP。  
 **本基线改了什么**：① ADR-063 升为 `ACCEPTED`，**P0-A 成为 P0 主线形态**，P0-B（三轴一体舱）保留为后续 field 形态且**实测门不取消**；② ADR-066（主机侧娱乐后端：屏幕打靶 / 投影靶场）新立并 `ACCEPTED`；③ ADR-065（感知内核节点模型泛化）方向冻结、**前置解除**；④ `AGENTS.md` 的形态、节点数、电源域、走线、IMU 与扳机红线**全部改写**；⑤ 新增 `ESP32_GUN_ASSISTANT.md`（枪侧设计，含 D1–D6）与 `PC_SIMULATION_BACKENDS.md`（娱乐后端）；⑥ `PROJECT_BOUNDARIES.md` §4 新增「游戏/模拟」行与游戏事实口径；⑦ `ROADMAP.md`、`TECHNICAL_DEBT.md`、采购清单同步。  
-**仍未做**：**没有任何代码改动**（`GS-ARCH-001`、`GS-CONTRACT-004` 均保持 `OPEN`）；P0-A 硬件**未采购、未接线、未实测**。  
+**仍未做**：**没有任何代码改动**（`GS-ARCH-001`、`GS-CONTRACT-004` 均保持 `OPEN`）；P0-A 硬件**未采购、未接线、未实测**。
+
+> **⚠ 2026-10-12 状态更新（本节及其下的「当前事实基线」表已按新状态改写；上面的基线叙述保留为 09-23 当日的记录）**
+>
+> 代码已落地：**感知内核节点模型泛化 + 契约 v0.3**（**ADR-067**）。
+> - `GS-ARCH-001` **已关闭**；`GS-CONTRACT-004` **范围缩小**（契约抬版本部分完成）；新增 `GS-CONTRACT-005`（`AngularRateSample` 字段未经实机验证）。
+> - **已验证的**：`cargo fmt --check`（三包）、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace --all-targets`、`cargo test --workspace --doc`、Schema 零漂移 `--check`——**全部通过**。回归证据：模拟器 9 帧 golden **逐字段**快照门禁（归一化 `contract_version` 后 9/9 帧逐字节相同，且经否定测试证明非空过）；内核既有 9 个测试**判据一字未改**（测试数 18 → 26）。
+> - **未验证的（不得当作通过）**：`scripts/verify.ps1` **未整体执行**（PowerShell 工具被本机策略禁用），因此其 **`cargo audit`** 与 **`check-workspace-boundaries.ps1`** 两节未跑；**未铸造新基线 tag**，也未绑定冻结 SHA。
+> - **边界**：本次改动全部在桌面/三 crate 代码与 `schemas/`、`docs/`；**未触及任何硬件**，P0-A 硬件状态不变（仍未采购、未接线、未实测）。
+> - 基线叙述里「唯一权威……基线 tag：`baseline/GS-P0-BL-2026-09-23`」仍然有效——它是上一个**已验证**的 tag；本次改动**尚未**获得同级 tag。  
 **门禁证据**：`./scripts/verify.ps1` 在**干净工作树、绑定提交 `ca7bdf7`** 上全流程 **PASS**（3 包 fmt → workspace 边界 → Clippy `-D warnings` → all-targets 测试 → doctest → Schema 零漂移 → `cargo audit`；1 条允许的 `chacha20 0.10.1` yanked 警告）。本基线周期内**代码未变**（改动全部为 `AGENTS.md` 与 `docs/`），因此门禁结论对 v0.2 契约与三 crate workspace 继续有效。  
 **导出件**：桌面 Package 侧 16 份已按 `scripts/export-docs.ps1` 重放刷新（`mapped=22 exported=8 stale=0`），其中本次受影响的是 `07-硬件实施计划-参考.md` 与 `采购核对清单.md`。
 **唯一权威**：本仓 `E:\OCLive\oclive-四季宝器灵` 是四季宝的唯一权威；桌面、导出包与个人文档中的同名文件只是导出件或历史副本。基线 tag：`baseline/GS-P0-BL-2026-09-23`；分阶段提交与不入仓大工件规则见 `DEVELOPMENT_DISCIPLINE.md`§9。  
@@ -23,8 +32,8 @@
 | **枪侧形态（P0-A 主线）** | **一块 ESP32-S3（N16R8）+ SPI 小屏 + IMU + 外部只读扳机霍尔**，小屏固定于导轨；PC 为唯一 Host | `DECIDED`（ADR-063 `ACCEPTED`，决策 D1–D6）；**未采购、未接线、未实测** |
 | **链路（P0-A）** | 开发期 **USB-CDC 串口 + 电脑供电**；正式 **Wi-Fi STA**（路由器后 PC 或手机热点）；BLE 不排期 | `DECIDED`（D1/D2）；Wi-Fi 的 p95 与抖动 `UNKNOWN` |
 | **娱乐后端** | 主机侧打靶/靶场（ADR-066）：**G0 = 扣扳机 → 主机画面反馈**（无瞄准、无相机） | `DECIDED`（方向）；**未实现** |
-| **感知内核节点模型** | 现行内核把「两个固定角色」写死，`PerceptionProfile` 强制两个不同 `NodeUid` → **单节点形态无法构造 profile** | `MEASURED`（静态核验，`GS-ARCH-001`）；ADR-065 方向与约束已冻结 |
-| **契约扩展能力** | v0.2 为闭集枚举 + `deny_unknown_fields`；`NodeHello` 版本/能力协商**设计已冻结、代码未实现**；无角速率观测、无表达侧类型 | `MEASURED`（静态核验，`GS-CONTRACT-004`） |
+| **感知内核节点模型** | **已泛化**（2026-10-12，ADR-067）：`PerceptionProfile` 为「节点 → 能力集」映射，`NodeRole` 删除，单节点可声明全部能力。**单节点形态现在可以构造 profile** | `MEASURED`（自动测试）；`GS-ARCH-001` **已关闭** |
+| **契约扩展能力** | **v0.3 为当前基线**（2026-10-12）：`GripContact` 加判别字段、`AngularRateSample` 独立指向流、`ContractVersion::V0_2` 被替换（v0.2 消息现被拒绝）。**仍缺**：`NodeHello` 版本/能力协商实现、`AssetRef`/表达侧类型 | `MEASURED`（自动测试 + Schema 零漂移门）；`GS-CONTRACT-004` 范围缩小 |
 | 软件闭环 | Observation→Perception→DeviceEvent→typed sensor request→RoleCue→ScreenViewModel桌面半闭环可重复运行 | `MEASURED`（自动测试） |
 | OCLive边界 | 兄弟仓提供类型化sensor origin；本仓只通过窄适配器接入 | `DECIDED + MEASURED` |
 | OCLive真实调用落地 | 接口与窄适配器保留；跨仓真实桌面接入暂缓，等待OCLive内核梳理完成 | `PAUSED_BY_OWNER` |
@@ -135,8 +144,8 @@ PNG/HUD 属于 P0。语音、相机、Live2D、余弹和更多节点不是 P0 �
 1. **采购最小集（约 55–130 元）**：ESP32-S3 **N16R8**、**ICM-42688-P（SPI）**（QMI8658 作回退）、数字霍尔（A3144 类）、3×2 mm 钕磁铁、杜邦线/电阻。**屏单独按导轨支架的实际尺寸下单**（ST7789 类 SPI，240×320 级）。**不买**：主机电池、喇叭、相机、投影。
 2. **桌面 USB 阶段（阶段 A）**：电脑 USB 供电 + USB-CDC，把「ESP32 → SPI 屏出图」→「IMU 举枪/放下」→「霍尔扳机触点」逐项跑通，每步只加一个变量。
 3. **台架实验**（并入 ADR-063 待办 1）：IMU 静止噪声、零偏重复性、温漂、预热时间、100 Hz 节拍抖动；FSR ADC 线性与噪声；Wi-Fi 丢包与 p95。
-4. **契约 v0.3**：实现既有 `NodeHello` 协商 + 角速率观测 + `AssetRef` ID 空间 + 只读换弹（`GS-CONTRACT-004`）。
-5. **感知内核节点模型泛化**（`GS-ARCH-001`，ADR-065）：**不需要硬件**，可在模拟器上完成，是单节点形态的开工前置。
+4. ~~**契约 v0.3**~~ → **已于 2026-10-12 落地**（ADR-067）：`GripContact` 判别字段 + `AngularRateSample` 独立指向流 + 版本抬到 v0.3。**`NodeHello`/`AssetRef`/只读换弹仍未做**（分别归 `GS-CONTRACT-004` 与 P1+ 阶段门禁）。**固件可对齐的形状已冻结在 `schemas/*.v0.3.schema.json`。**
+5. ~~**感知内核节点模型泛化**~~ → **已于 2026-10-12 落地**（`GS-ARCH-001` 关闭）。**单板形态现在可以构造 profile**，这是 ESP32 侧开工的前置，已解除。**下一步变成**：ESP32 固件按 v0.3 形状实现（注意 `sequence` 必须全观察种类**共用一条账本**）。
 6. **娱乐后端 G0**：扣扳机 → 主机画面反馈（ADR-066 §8）。
 
 **P0-B 并行项（不阻塞主线）**：

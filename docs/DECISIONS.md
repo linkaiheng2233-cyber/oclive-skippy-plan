@@ -910,6 +910,8 @@ P0-A 直接解除的既有阻塞：随附 Mini HDMI 线的 DDC 故障（`GS-HW-0
 
 **2026-09-23 更新**：ADR-063 已升为 `ACCEPTED`（P0-A 成为主线形态），**本项前置解除，重构可开工**；`GS-ARCH-001` 维持 `OPEN` 至代码落地并跑过完整门禁。
 
+**2026-10-12 修订（落地时发现本 ADR 正文有一处判断不成立）**：上面「**为什么不需要新契约版本**」只对**泛化本身**成立，对**单板形态**不成立——`GripContact` 没有判别字段，单板两个 FSR 挂在同一节点时内核无法区分前握与后握，这**是**协议缺口。实际落地走了 **ADR-067**：泛化按本 ADR 三条硬约束执行（条款本身未改），但**同时**把契约抬到 v0.3。本 ADR 的「不在范围内两项」中，**能力协商仍在本 ADR 范围外**（移交 `GS-CONTRACT-004`），角速率则由 ADR-067 以**独立消息**而非本 ADR 未涉及的形状处理。
+
 **成本估算**：桌面侧约 **1–2 天**（`ESTIMATED`，含 host/simulator 调用点与测试同步，不含硬件）。不需要任何硬件，可在模拟器上完成。
 
 **证据**：`crates/ailive-gun-spirit-perception-core/src/reducer/profile.rs`、`reducer.rs`、`crates/ailive-gun-spirit-contracts/src/lib.rs`；台账 `TECHNICAL_DEBT.md` 的 `GS-ARCH-001`；形态侧 `ESP32_GUN_ASSISTANT.md` §9.3 第 0 项。
@@ -940,8 +942,95 @@ P0-A 直接解除的既有阻塞：随附 Mini HDMI 线的 DDC 故障（`GS-HW-0
 
 1. **G0 最小闭环**：扣扳机 → PC 画面反馈，用来回答「枪当游戏输入设备好不好玩」；其**阻塞项是扳机检测的机械方案三选一**（外部微动 / 外部霍尔 + 磁铁 / 不碰枪的握把按键）。
 2. **契约 v0.3 的范围**：v0.2 的 `SensorObservationKind` 是**闭集枚举 + `deny_unknown_fields`**（`contracts/src/lib.rs:179`），**角速率无法"悄悄加"**，必须走新契约版本。**版本/能力协商无需重新设计**——`NodeHello` 报 `supported_contract_versions` + capabilities、Host 取最高共同版本的设计**早已冻结**（`78A-R1` 等），缺的是实现。故 v0.3 = **实现既有 NodeHello 协商** + 抬版本，并把 **① 角速率观测与 `Capability` 成员、② `AssetRef` ID 空间、③ 只读换弹** 作为首批能力一次做完。**IMU 实测**（静止噪声、零偏重复性、温漂、预热时间、100 Hz 节拍抖动）与接口选型（**D6 已定 ICM-42688-P / SPI，QMI8658 回退**）并入 ADR-063 的台架实验清单。**相机降为按需**：仅在其启用时才需裁决它与 P1「娱乐观察」是同一条通道还是两条。
+
+   **2026-10-12 修订（本条的三项首批能力已被 ADR-067 重新切分）**：所有者当日裁定 v0.3 **一次加完**，但实际范围与上述切分不同——① **角速率改为独立顶层消息 `AngularRateSample`，不再是 `Capability` 成员、不进 `SensorObservationKind`**（理由：100 Hz 控制流会污染按节点共用的 sequence 账本，并每帧触发全量 `recompute()`；详见 ADR-067 §二.5）；② `AssetRef` 与 ③ 只读换弹**仍不在本次**（前者留 `GS-CONTRACT-004`，后者是 P1+ 阶段门禁）。同一版本的 v0.3 **额外**包含了本待办未列出的内容：`GripContact` 判别字段（单板形态强制要求）。
 3. **与形态联动**：本方向只在 PC 主机形态（ADR-063）下成立，随该形态一并裁决。
 4. **接受前不得**修改 `PROJECT_BOUNDARIES.md`、不得新增采购行、不得改动 `ROADMAP.md`；娱乐后端**先作为 `ailive-gun-spirit-host` 内的独立模块**，不急于新增第 4 个 crate（workspace 成员数有门禁断言，见 `GS-BOUNDARY-001`）。
 
 原因：「枪娘陪你打靶」把 PC 主机形态的价值从「更大的模型」扩展到「屏幕/投影上的娱乐内容」，而它恰好只需要主机侧算力与一条已有的离散事件链路就能成立——枪上硬件零改动，却能显著提升把玩价值。同时它踩在两条红线附近（视觉瞄准、射击解算），因此必须先把**允许与禁止的分界线写成一句话规则**并入档，再谈实现；否则「打靶游戏」会顺着最省事的实现路径滑向弹道模拟与辅助瞄准，那正是本项目明令禁止的方向。
+
+## ADR-067：节点模型泛化落地；单板形态强制契约 v0.3，角速率改走独立指向流
+
+状态：**ACCEPTED**（2026-10-12，所有者裁决「一次 v0.3 加完」）。ADR-065 的落地（`GS-ARCH-001`）与 ADR-066 待办② 的契约部分**在本 ADR 一并关闭**。
+
+### 一、本 ADR 为什么必须存在
+
+ADR-065 正文写着「**为什么不需要新契约版本**：`PerceptionProfile` 属 `perception-core`，**不在 v0.2 消息内**……不改消息字段、不改 `schemas/`、不触碰零漂移门」。
+
+**这个判断对"泛化本身"成立，对"单板形态"不成立。** 落地时暴露出一个 ADR-065 没有覆盖的耦合：
+
+```
+GripContact { contact, strength_milli }     ← 没有判别字段
+```
+
+双板形态下，「前握还是后握」是**由哪个 `node_uid` 发的**推断出来的（`observation_capability(role, …)` 的白名单）。P0-A 单板形态下两个 FSR 挂在**同一个节点**上，这条推断**不再成立**——内核收到两条 `GripContact`，无法区分它们。
+
+所以单板形态要的不是"少一个约束"，而是**载荷里多一个判別字段**。那是**协议变更**，必须抬版本。ADR-065 的"不需要新契约版本"就此被推翻，理由必须入档而不是悄悄绕过。
+
+### 二、决定
+
+**1. 契约 v0.3：`GripBinding` + `GripContact.grip`。** 照既有 `AuxControlContact.control_id`（`PrimaryControlId`）的范式，新增单变体可扩展枚举 `GripBinding { Front, Rear }`，`GripContact` 加必填字段 `grip`。`Capability` 枚举**不新增成员**。
+
+**2. `ContractVersion` 的 `V0_2` 变体被替换，不并存。**
+
+保留 `V0_2` 会让一条标着 `"0.2"` 的消息**解析通过**，而它的 grip 载荷只能按 v0.3 的类型解释——那是对外宣称支持一个本仓并未实现的语义。v0.2 从未有过**已部署的生产者**（ESP32 固件尚不存在，唯一生产者是同仓模拟器，与本仓同改），因此没有需要承接的兼容负担。这与本仓对 v0.1 的处理先例一致。
+
+副作用是**明确的**：v0.2 消息现在被**拒绝**，而不是"解析通过但语义悄悄变了"。已有测试 `v0_2_messages_are_rejected_under_v0_3` 锁定这一点。
+
+**3. `schemas/` 只产当前版本。** v0.2 三份**冻结为历史件**，不再重新生成——重新生成会产生一份既自称 v0.2、又描述 v0.3 类型的文件。`generated_schema_documents()` 只产出 v0.3 四份（新增 `angular-rate-sample.v0.3`）。
+
+**4. 泛化按 ADR-065 的三条硬约束落地。**
+
+- `PerceptionProfile` 从「两个必需且互不相同的 `NodeUid`」变为 **`节点 → 能力集` 映射**；
+- 新增 `CapabilitySet`（非空有序集）；
+- `NodeRole` 私有枚举**删除**；`node_role()` / `session()` / `session_mut()` / `clear_node()` 一律按 `node_uid`；
+- **`observation_capability` 变成纯函数** `fn(&SensorObservationKind) -> Capability`——不含节点、不含角色、不返回 `Result`。旧签名需要 `role` 参数，正是因为 `GripContact` 没有判别字段；判别字段进契约后那个参数**彻底消失**。这是本次泛化做对了的标志；
+- 唯一的拓扑约束是**同一 `Capability` 至多一个 owner**（`ProfileError::CapabilityOwnedTwice`）。它**蕴含**旧的"前后必须不同 UID"，同时容纳"一块板拥有全部"与"两块板各管一半"；
+- `node_health` 顺序由 `node_uid` **字典序**排定（`NodeUid` 未派生 `Ord`，故用有序 `Vec` + `as_str()` 排序，不改契约类型）。排序而非保留声明顺序，是为了让"同一组绑定、不同声明顺序"产生同一份 `PerceptionState`。已有测试 `node_health_follows_sorted_order_not_declaration_order` 锁定它，**不靠两处既有 UID 恰好 front 在前的巧合**；
+- **`resolve_carrier` 一行未改**。它收的是**具名语义参数**（`front_grip`/`rear_grip`/`motion`/`pose`），对节点无感；单板形态只是"前后两个语义槽由同一节点填充"。
+
+**5. 角速率走独立顶层消息 `AngularRateSample`，不进 `SensorObservationKind`、不进 `Capability`、不进 `perception-core`。**（**修订 ADR-066 待办② 的「角速率观测与 `Capability` 成员」**）
+
+沿 ADR-066 原文把角速率做成 `SensorObservationKind` 变体 + 一个 `Capability` 成员会在三个地方同时出错：
+
+| 理由 | 具体后果 |
+|---|---|
+| **故障域必须分开** | `NodeSession.last_sequence` 是**按节点共用**的账本。100 Hz 瞄准流的丢包/乱序会命中 `SequenceCollision`/`SequenceRegressed` 并**打断同一帧的握持与姿态融合**——一条瞄准流的抖动可以把感知账本打崩 |
+| **信封语义互斥** | `SensorObservation` 是**低频可追溯的语义事实**：唯一 `observation_id`、进 `source_refs`、有 TTL、可回放。角速率是**高频「最新即有效」的控制流**（ADR-066 §3.2 建议 100 Hz），旧的帧没有保留价值，上述信封逐项无意义 |
+| **职责边界** | ADR-066 §3.2 把积分、平滑、回中、夹持与渲染**全部放在主机侧**，感知内核不参与。它不属于 `perception-core` 的职责，也不该获得 `Capability` |
+| **代价** | 每帧都走完整 `recompute()` → `resolve()` → `render_snapshot()` + 快照克隆。1 Hz 无所谓，100 Hz 是每秒 100 次 |
+
+因此 `AngularRateSample` 是**第四个顶层消息类型**，由主机侧指向后端直接消费。它**不融合进 `PerceptionState`**，与 `ShockObserved`（契约有效、内核不融合）同一处置思路。
+
+**范围诚实性**：本类型的字段（三轴毫度每秒、`quality_milli`、符号与轴向约定）**尚未经任何实机数据验证**。它是为了让枪侧固件可以对着一个冻结的形状写，而不是因为已经知道这些量是对的。首次 IMU 台架实验（ADR-063 待办①）后预计要改；届时按协议变更正常抬版本。
+
+**6. 新增固件义务（单板形态的必要条件）。** `NodeSession.last_sequence` 是**按节点**记账的：同一节点内 `sequence` 相同而载荷不同即 `SequenceCollision`。现行每个节点只报一类观察，从不暴露这一点；**单板形态下 ESP32 必须对全部观察种类共用一个单调 `sequence` 账本**，不得按传感器各自计数——否则第一条就撞。
+
+### 三、如何证明硬约束 2（双节点形态零语义变更）
+
+**不是靠断言，是靠快照。** 改动前先把模拟器 9 个场景的输出落成 golden 文件（`crates/ailive-gun-spirit-host/tests/golden/default_lifecycle.jsonl`，9 行 / 30,911 B / sha256 `320b66a702e6224f`），并新增门禁 `tests/golden_frames.rs`：逐帧**逐字段**比较，唯一豁免是 `contract_version`（它是**声明**变更，不是语义变更）。
+
+该门禁经过**否定测试**——故意扰动 golden 里一个深处字段（`perception_state.front_grip.reason`），确认它失败并报出精确路径；否则无法区分"真的没变"与"门禁是空的"。
+
+实测结论：`contract_version` 由 `0.2` 变为 `0.3`（证明门禁非空过），**归一化后 9/9 帧逐字节相同**。
+
+`perception-core` 的 9 个既有测试**判据一字未改**（仅 `grip()` 助手改为从节点名派生判别字段，保持 v0.3 之前的含义），全部通过。
+
+### 四、证据
+
+- 契约：`crates/ailive-gun-spirit-contracts/src/lib.rs`、`schemas/*.v0.3.schema.json`、`schemas/fixtures/v0.3/`（5 有效 + 9 无效）
+- 内核：`crates/ailive-gun-spirit-perception-core/src/reducer/{profile.rs,reducer.rs}`（测试 18 → 26）
+- 门禁：`crates/ailive-gun-spirit-host/tests/golden_frames.rs`
+- 台账：`TECHNICAL_DEBT.md` 的 `GS-ARCH-001`（本次关闭）、`GS-CONTRACT-004`
+
+### 五、不在本次范围
+
+| 项 | 去向 |
+|---|---|
+| **`NodeHello` 能力协商** | `GS-CONTRACT-004`。真实板要"自己声明能力"时才需要；P0 单板可由 host 侧静态配置 → 不阻塞 |
+| **`AssetRef` / 表达侧（下行）类型** | `GS-CONTRACT-004`。等 SPI 屏要显示角色素材时做 |
+| **只读换弹** | **阶段门禁**：G5 之后的 P1+，不得进 P0 |
+| **`AngularRateSample` 的实机字段验证** | 首次 IMU 台架实验后按协议变更抬版本 |
+
+原因：单板形态是 P0-A 的**开工前置**——它不解决，硬件到了也接不进内核。而它一旦落地就必然暴露"判别字段"这个协议缺口，所以泛化与契约抬版本**只能一起做**。角速率虽不在关键路径上，但所有者裁定一次 v0.3 加完，且把它做成独立消息而非 `Capability` 成员是**降低**而非增加耦合：它让感知账本不被一条 100 Hz 控制流污染。三件事的共同点是**都不需要硬件**——这是当前唯一能推进的方向。
 
