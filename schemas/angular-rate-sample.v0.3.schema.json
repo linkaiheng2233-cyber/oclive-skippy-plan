@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "BootId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ContractVersion": {
+      "description": "感知契约的线版本。\n\n版本字符串只写在这里一处（`serde` 重命名）；不另设同值的 `pub const`，\n否则同一事实会有两份副本、可以各自漂移。\n\nv0.2 的变体**已被替换**而不是保留：保留它会让一条标着 `\"0.2\"` 的消息\n仍然解析通过，而它的载荷只能按v0.3的类型解释——等于对外宣称支持一个\n本仓并未实现的语义。v0.2 从未有过已部署的生产者（ESP32固件尚不存在，\n唯一生产者是同仓模拟器），因此不存在需要承接的兼容负担。",
+      "enum": [
+        "0.3"
+      ],
+      "type": "string"
+    },
+    "NodeUid": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "Permille": {
+      "format": "uint16",
+      "maximum": 1000,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$id": "https://oclive.dev/schemas/ailive.gun-spirit/angular-rate-sample.v0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "指向流的一帧角速率采样（IMU→主机侧虚拟靶场准星）。\n\n**它不是`SensorObservation`，也刻意不进`SensorObservationKind`。** 两者是\n语义相反的两种流：\n\n- `SensorObservation`是**低频、可追溯的语义事实**：每条都要有唯一\n  `observation_id`、要进`source_refs`、有TTL、可回放，内核据此融合出`Fact`。\n- `AngularRateSample`是**高频、最新即有效的控制流**（`PC_SIMULATION_BACKENDS.md`\n  §3.2 建议100 Hz）：旧的帧没有保留价值，积分/平滑/回中/渲染全部**在主机侧**完成，\n  感知内核不参与。\n\n合流的代价是具体的：100 Hz流的一次丢包或乱序会命中reducer的`SequenceCollision`/\n`SequenceRegressed`，而那是**按节点共用**的账本——一条瞄准流的抖动会打断同一帧\n的握持与姿态融合；此外每帧都走完整`recompute()`并克隆快照，1 Hz无所谓，100 Hz\n是每秒100次。信封语义（`observation_id`/`source_refs`/TTL/回放）对控制流则毫无意义。\n\n因此本类型**不由`perception-core`消费**；它没有对应的`Capability`成员。\n主机侧指向后端直接消费它。",
+  "properties": {
+    "boot_id": {
+      "$ref": "#/$defs/BootId"
+    },
+    "contract_version": {
+      "$ref": "#/$defs/ContractVersion"
+    },
+    "node_monotonic_ms": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "node_uid": {
+      "$ref": "#/$defs/NodeUid"
+    },
+    "quality_milli": {
+      "$ref": "#/$defs/Permille",
+      "description": "该帧采样质量`0..=1000`，由节点侧饱和/收敛判定给出，主机据此决定是否计入积分。\n与`Fact::Known.confidence_milli`同口径：表示判定余量，**不表示统计概率**。"
+    },
+    "rate_mdps_x": {
+      "description": "三轴角速率，单位为**毫度每秒**（milli-degrees per second），\n与`OrientationEstimate.gravity_mg_x`的毫g同一量纲范式。\n符号约定与轴向由实机标定确定，属未验证项。",
+      "format": "int32",
+      "type": "integer"
+    },
+    "rate_mdps_y": {
+      "format": "int32",
+      "type": "integer"
+    },
+    "rate_mdps_z": {
+      "format": "int32",
+      "type": "integer"
+    },
+    "sequence": {
+      "description": "该节点**全部出站消息共用**的单调序号账本，不按传感器各自计数。",
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "contract_version",
+    "node_uid",
+    "boot_id",
+    "sequence",
+    "node_monotonic_ms",
+    "rate_mdps_x",
+    "rate_mdps_y",
+    "rate_mdps_z",
+    "quality_milli"
+  ],
+  "title": "A.I.Live Gun Spirit AngularRateSample v0.3",
+  "type": "object"
+}

@@ -8,14 +8,22 @@ use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 
-pub const CONTRACT_VERSION_V0_2: &str = "0.2";
 pub const MAX_SOURCE_REFS: usize = 4;
 pub const MAX_NODE_HEALTH_ENTRIES: usize = 8;
 
+/// 感知契约的线版本。
+///
+/// 版本字符串只写在这里一处（`serde` 重命名）；不另设同值的 `pub const`，
+/// 否则同一事实会有两份副本、可以各自漂移。
+///
+/// v0.2 的变体**已被替换**而不是保留：保留它会让一条标着 `"0.2"` 的消息
+/// 仍然解析通过，而它的载荷只能按v0.3的类型解释——等于对外宣称支持一个
+/// 本仓并未实现的语义。v0.2 从未有过已部署的生产者（ESP32固件尚不存在，
+/// 唯一生产者是同仓模拟器），因此不存在需要承接的兼容负担。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ContractVersion {
-    #[serde(rename = "0.2")]
-    V0_2,
+    #[serde(rename = "0.3")]
+    V0_3,
 }
 
 macro_rules! string_id {
@@ -169,6 +177,18 @@ pub enum PrimaryControlId {
     PrimaryTrigger,
 }
 
+/// 握持位置判别，与`AuxControlContact.control_id`同一范式。
+///
+/// P0-B的双节点形态下，「前握还是后握」可以由**哪个节点上报**推断；
+/// P0-A单板形态下两个FSR挂在同一节点上，推断不再成立——
+/// 判别必须来自载荷自身，否则内核收到两条`GripContact`时无法区分。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GripBinding {
+    Front,
+    Rear,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     tag = "kind",
@@ -178,6 +198,7 @@ pub enum PrimaryControlId {
 )]
 pub enum SensorObservationKind {
     GripContact {
+        grip: GripBinding,
         contact: Contact,
         strength_milli: Permille,
     },
@@ -210,6 +231,44 @@ pub struct SensorObservation {
     pub sequence: u64,
     pub node_monotonic_ms: u64,
     pub observation: SensorObservationKind,
+}
+
+/// 指向流的一帧角速率采样（IMU→主机侧虚拟靶场准星）。
+///
+/// **它不是`SensorObservation`，也刻意不进`SensorObservationKind`。** 两者是
+/// 语义相反的两种流：
+///
+/// - `SensorObservation`是**低频、可追溯的语义事实**：每条都要有唯一
+///   `observation_id`、要进`source_refs`、有TTL、可回放，内核据此融合出`Fact`。
+/// - `AngularRateSample`是**高频、最新即有效的控制流**（`PC_SIMULATION_BACKENDS.md`
+///   §3.2 建议100 Hz）：旧的帧没有保留价值，积分/平滑/回中/渲染全部**在主机侧**完成，
+///   感知内核不参与。
+///
+/// 合流的代价是具体的：100 Hz流的一次丢包或乱序会命中reducer的`SequenceCollision`/
+/// `SequenceRegressed`，而那是**按节点共用**的账本——一条瞄准流的抖动会打断同一帧
+/// 的握持与姿态融合；此外每帧都走完整`recompute()`并克隆快照，1 Hz无所谓，100 Hz
+/// 是每秒100次。信封语义（`observation_id`/`source_refs`/TTL/回放）对控制流则毫无意义。
+///
+/// 因此本类型**不由`perception-core`消费**；它没有对应的`Capability`成员。
+/// 主机侧指向后端直接消费它。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AngularRateSample {
+    pub contract_version: ContractVersion,
+    pub node_uid: NodeUid,
+    pub boot_id: BootId,
+    /// 该节点**全部出站消息共用**的单调序号账本，不按传感器各自计数。
+    pub sequence: u64,
+    pub node_monotonic_ms: u64,
+    /// 三轴角速率，单位为**毫度每秒**（milli-degrees per second），
+    /// 与`OrientationEstimate.gravity_mg_x`的毫g同一量纲范式。
+    /// 符号约定与轴向由实机标定确定，属未验证项。
+    pub rate_mdps_x: i32,
+    pub rate_mdps_y: i32,
+    pub rate_mdps_z: i32,
+    /// 该帧采样质量`0..=1000`，由节点侧饱和/收敛判定给出，主机据此决定是否计入积分。
+    /// 与`Fact::Known.confidence_milli`同口径：表示判定余量，**不表示统计概率**。
+    pub quality_milli: Permille,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -395,6 +454,15 @@ impl ContractValidate for SensorObservation {
     }
 }
 
+impl ContractValidate for AngularRateSample {
+    fn validate(&self) -> Result<(), Vec<ValidationError>> {
+        let mut errors = Vec::new();
+        self.node_uid.validate_at("node_uid", &mut errors);
+        self.boot_id.validate_at("boot_id", &mut errors);
+        finish_validation(errors)
+    }
+}
+
 impl<T> Fact<T> {
     fn validate_at(&self, path: &str, revision: u64, errors: &mut Vec<ValidationError>) {
         match self {
@@ -562,22 +630,32 @@ impl From<serde_json::Error> for SchemaGenerationError {
     }
 }
 
+/// 当前基线的Schema集合。
+///
+/// 只产出**当前**版本：v0.2三份已冻结为历史件，不再重新生成。
+/// 重新生成它们会产生一份既自称v0.2、又描述v0.3类型的文件——
+/// 那已经不是"描述v0.2消息"的schema了。
 pub fn generated_schema_documents() -> Result<Vec<GeneratedSchema>, SchemaGenerationError> {
     Ok(vec![
         render_schema::<SensorObservation>(
-            "sensor-observation.v0.2.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/sensor-observation.v0.2.schema.json",
-            "A.I.Live Gun Spirit SensorObservation v0.2",
+            "sensor-observation.v0.3.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/sensor-observation.v0.3.schema.json",
+            "A.I.Live Gun Spirit SensorObservation v0.3",
+        )?,
+        render_schema::<AngularRateSample>(
+            "angular-rate-sample.v0.3.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/angular-rate-sample.v0.3.schema.json",
+            "A.I.Live Gun Spirit AngularRateSample v0.3",
         )?,
         render_schema::<PerceptionState>(
-            "perception-state.v0.2.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/perception-state.v0.2.schema.json",
-            "A.I.Live Gun Spirit PerceptionState v0.2",
+            "perception-state.v0.3.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/perception-state.v0.3.schema.json",
+            "A.I.Live Gun Spirit PerceptionState v0.3",
         )?,
         render_schema::<DeviceEvent>(
-            "device-event.v0.2.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.2.schema.json",
-            "A.I.Live Gun Spirit DeviceEvent v0.2",
+            "device-event.v0.3.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.3.schema.json",
+            "A.I.Live Gun Spirit DeviceEvent v0.3",
         )?,
     ])
 }
