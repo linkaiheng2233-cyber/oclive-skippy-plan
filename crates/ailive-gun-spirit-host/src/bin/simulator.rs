@@ -1,15 +1,15 @@
 //! Hardware-free SensorObservation -> PerceptionState -> DeviceEvent -> screen simulation.
 
 use ailive_gun_spirit_contracts::{
-    BootId, Contact, ContractVersion, DeviceEvent, DeviceEventKind, EventId, MotionClass, NodeUid,
-    ObservationId, PerceptionState, Permille, Pose, PrimaryControlId, SensorObservation,
-    SensorObservationKind,
+    BootId, Capability, Contact, ContractVersion, DeviceEvent, DeviceEventKind, EventId,
+    GripBinding, MotionClass, NodeUid, ObservationId, PerceptionState, Permille, Pose,
+    PrimaryControlId, SensorObservation, SensorObservationKind,
 };
 use ailive_gun_spirit_host::{
     InputScheduler, OutputArbiter, RoleCue, RoleCueSource, SensorTurnRequest, SystemCue,
 };
 use ailive_gun_spirit_perception_core::{
-    ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
+    CapabilitySet, ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
     PerceptionReducer, PerceptionReplay, ReductionOutput, ReplayDisposition,
 };
 use serde_json::json;
@@ -78,7 +78,7 @@ impl MockNode {
             .checked_add(1)
             .ok_or_else(|| "mock node sequence overflow".to_owned())?;
         Ok(SensorObservation {
-            contract_version: ContractVersion::V0_2,
+            contract_version: ContractVersion::V0_3,
             observation_id: ObservationId::try_new(format!(
                 "{}:{}:{}",
                 self.uid.as_str(),
@@ -152,6 +152,7 @@ impl DesktopFixture {
             "held" => {
                 self.physical.rear_grip = Contact::Engaged;
                 let observation = self.rear_observation(SensorObservationKind::GripContact {
+                    grip: GripBinding::Rear,
                     contact: Contact::Engaged,
                     strength_milli: permille(900)?,
                 })?;
@@ -166,6 +167,7 @@ impl DesktopFixture {
                 self.physical.pose = Pose::Raised;
                 let observations = vec![
                     self.front_observation(SensorObservationKind::GripContact {
+                        grip: GripBinding::Front,
                         contact: Contact::Engaged,
                         strength_milli: permille(900)?,
                     })?,
@@ -174,6 +176,7 @@ impl DesktopFixture {
                     })?,
                     self.front_observation(orientation(Pose::Raised)?)?,
                     self.rear_observation(SensorObservationKind::GripContact {
+                        grip: GripBinding::Rear,
                         contact: Contact::Engaged,
                         strength_milli: permille(900)?,
                     })?,
@@ -213,10 +216,12 @@ impl DesktopFixture {
                 self.physical.motion = MotionClass::Idle;
                 let observations = vec![
                     self.front_observation(SensorObservationKind::GripContact {
+                        grip: GripBinding::Front,
                         contact: Contact::Released,
                         strength_milli: permille(100)?,
                     })?,
                     self.rear_observation(SensorObservationKind::GripContact {
+                        grip: GripBinding::Rear,
                         contact: Contact::Released,
                         strength_milli: permille(100)?,
                     })?,
@@ -278,6 +283,7 @@ impl DesktopFixture {
     fn seed_current_physical(&mut self) -> Result<usize, String> {
         let observations = vec![
             self.front_observation(SensorObservationKind::GripContact {
+                grip: GripBinding::Front,
                 contact: self.physical.front_grip,
                 strength_milli: contact_strength(self.physical.front_grip)?,
             })?,
@@ -286,6 +292,7 @@ impl DesktopFixture {
             })?,
             self.front_observation(orientation(self.physical.pose)?)?,
             self.rear_observation(SensorObservationKind::GripContact {
+                grip: GripBinding::Rear,
                 contact: self.physical.rear_grip,
                 strength_milli: contact_strength(self.physical.rear_grip)?,
             })?,
@@ -383,7 +390,7 @@ impl DesktopFixture {
                     .checked_add(1)
                     .ok_or_else(|| "event sequence overflow".to_owned())?;
                 Ok(DeviceEvent {
-                    contract_version: ContractVersion::V0_2,
+                    contract_version: ContractVersion::V0_3,
                     event_id: EventId::try_new(format!("desktop-event-{}", self.event_sequence))
                         .map_err(|error| error.to_string())?,
                     host_boot_id: snapshot.host_boot_id.clone(),
@@ -450,9 +457,22 @@ fn new_reducer(
         .map_err(|error| error.to_string())?;
     let confidence = ConfidenceProfile::try_new(permille(900)?, permille(700)?, permille(900)?)
         .map_err(|error| error.to_string())?;
+    // 双板拓扑的能力划分，与泛化前`(role, observation)`白名单逐项等价。
+    let front_capabilities = CapabilitySet::try_new([
+        Capability::FrontGrip,
+        Capability::Motion,
+        Capability::Orientation,
+        Capability::ShockDiagnostic,
+    ])
+    .map_err(|error| error.to_string())?;
+    let rear_capabilities =
+        CapabilitySet::try_new([Capability::RearGrip, Capability::PrimaryControl])
+            .map_err(|error| error.to_string())?;
     let profile = PerceptionProfile::try_new(
-        front_node_uid.clone(),
-        rear_node_uid.clone(),
+        [
+            (front_node_uid.clone(), front_capabilities),
+            (rear_node_uid.clone(), rear_capabilities),
+        ],
         freshness,
         Some(orientation),
         confidence,
