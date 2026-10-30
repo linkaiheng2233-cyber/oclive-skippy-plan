@@ -88,7 +88,7 @@ ASR、TTS、扬声器、预渲染音频、触觉输出、相机、只读AI视觉
 
 **独立克隆的已知限制**：远端 clone 后必须在同级目录放一份 `oclivenewnew` 才能编译（路径依赖）。仓库当前**不提供 GitHub Actions**：按 `docs/DEVELOPMENT_DISCIPLINE.md`§9，依赖获取方式冻结前不创建必然失败的 CI；`GS-CI-001` 记录了解法候选（钉住 rev 的 git 依赖 / submodule / 受控 vendor），且兄弟仓已在 GitHub，候选 (a) 已可执行。
 
-**桌面与导出件不是权威**：桌面测试包、个人文档目录和现场填写件都只是导出副本；改动一律回填本仓，见 `docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md`。
+**桌面与导出件不是权威**：桌面测试包、个人文档目录和现场填写件都只是导出副本；改动一律回填本仓，见 [历史记录：EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md)。
 
 OCLive 不是云端薄客户端：Host、角色包、记忆/状态、SQLite、DeviceEvent、器灵状态机和屏幕仲裁都在板端运行。P0 可以使用本地 mock，也可以把动态表达接到外部 LLM API；网络不可用时动态文本可以降级，但设备必须能启动，拿起、举起、辅助触点和放回的完整闭环必须继续工作。当前不要求自建服务器。
 
