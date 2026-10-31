@@ -90,8 +90,5 @@
 - `DEBUG_REFERENCE.md`、`PIPELINE_CUSTOM.md`：生成器/内核调试参考。
 - `WELD_BENCH_REPORT.md`及英文版：无头Monolith性能模板。
 - `ARMV7_VALIDATION.md`：旧Lyra/ARMv7回退路线的历史与兼容证据。
-- [历史记录：EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md)：桌面个人文档与仓库SSOT的归并审计。
-- [历史记录：EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-18.md)：bring-up首轮后的新增扫描（测试包导出件复核与刷新、个人文档比对、新导入项、排除项与工件位置）。
-- [历史记录：EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-22.md)：导出件漂移复核（8 份重新导出、桌面独有采购价格归并入 `test-worksheets/采购核对清单.md`、排除项与后续动作）。
 
 这些文件若与项目基线、ADR或领域SSOT冲突，不具有覆盖权。
