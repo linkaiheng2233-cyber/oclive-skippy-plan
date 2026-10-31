@@ -756,7 +756,7 @@ RAG只负责检索稳定角色核心、当前模式/关系、已确认事实、�
 
 项目新增`PROJECT_BASELINE.md`作为从桌面半闭环进入硬件开发的共同起点，新增`PROJECT_BOUNDARIES.md`明确本仓、OCLive、角色内容、P0/P1和禁止范围，新增`DOCUMENTATION_SYSTEM.md`定义权威顺序、文档角色、状态词表、变更联动与外部归并规则；`docs/README.md`成为唯一导航入口。硬件到货状态只记为`REPORTED_RECEIVED`，在丝印、批次、完好、接口、电压和连接器方向逐件核验前不得升级为`MEASURED`或开始组合上电。
 
-本轮不批量移动既有文档。当前工作树存在大量未形成干净基线提交的代码与文档变化，立即移动会混淆技术修改和路径重构并制造断链；先通过逻辑分类消除“哪个文件权威”的歧义，待形成可追踪提交后再用单独的纯重构提交物理迁移目录。桌面个人文档通过`history/EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md`逐项审计：相同内容指向仓库canonical，旧导出标记SUPERSEDED，不复制成第二套SSOT；明确独立且涉及自动瞄准的思维实验排除在本项目与backlog之外。
+本轮不批量移动既有文档。当前工作树存在大量未形成干净基线提交的代码与文档变化，立即移动会混淆技术修改和路径重构并制造断链；先通过逻辑分类消除“哪个文件权威”的歧义，待形成可追踪提交后再用单独的纯重构提交物理迁移目录。桌面个人文档通过[历史记录：EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/history/EXTERNAL_DOCUMENT_AUDIT_2026-09-04.md)逐项审计：相同内容指向仓库canonical，旧导出标记SUPERSEDED，不复制成第二套SSOT；明确独立且涉及自动瞄准的思维实验排除在本项目与backlog之外。
 
 硬件bring-up顺序固定为身份/外观→断电电阻/极性→主板单独→屏幕单独→视频→触摸→Host/UI→单节点→双节点→节点电池→主机移动电源→机械假体→上枪静态→场地。每一步只增加一个变量，异常热、气味、限流、反供、反复brownout、极性不明、电芯异常或改变原载体机构动作时立即停止。学习入口为`HARDWARE_ENGINEERING_GUIDE.md`，但具体接线仍必须服从datasheet、领域SSOT和实测工作表。
 
@@ -865,7 +865,7 @@ P0-A 直接解除的既有阻塞：随附 Mini HDMI 线的 DDC 故障（`GS-HW-0
 - 在本厂商驱动上执行 `modetest -s <conn>@<crtc>:<mode>` 会导致 SSH 会话断开并使板子崩溃重启（实测两次）→ 运行期换模式不可用，只能改内核命令行并在开机时生效。
 - 本内核的 `drm_kms_helper` **不提供 `edid_firmware` 参数**，EDID 覆盖功能未编入 → 无法用伪造 EDID 强制厂商时序；`video=` 也不会覆盖 EDID 首选模式。
 
-**⓪ 补充：一个待验证的免费实验（2026-09-23 提出，未实测，不改变上述决定顺序）**：内核命令行的连接器语法支持一个 `D` 标志（`video=HDMI-A-1:480x800@60D`），由通用 DRM 解析为 `DRM_FORCE_ON_DIGITAL`，含义是**按数字 DVI 输出处理、跳过 HDMI 的 AVI/VSIF 信息帧**。由于板端像素时序与 PC 完全一致（CRTC `480x800: 60 34860 …700…830` 即 EDID 首选 DTD），"PC 能出图、板子不能"的差异只剩**信息帧**与 **TMDS 信号裕量**两处，而该标志只去掉前者，故可把两条根因**二选一**。它与既有结论不冲突：`video=` 不做的是"覆盖 EDID 首选模式"（模式选择轴），`D` 影响的是信令方式轴。**前提**：本厂商驱动是否采用该标志尚未验证——必须比对 dmesg 的 `select vic 0 use hdmi14 vsif` 行有无变化；若不变，则本次结果无效，不能据此否定信息帧假设。做法与判读见 `handoff/AI_SESSION_HANDOFF_2026-09-23.md` §2.6。
+**⓪ 补充：一个待验证的免费实验（2026-09-23 提出，未实测，不改变上述决定顺序）**：内核命令行的连接器语法支持一个 `D` 标志（`video=HDMI-A-1:480x800@60D`），由通用 DRM 解析为 `DRM_FORCE_ON_DIGITAL`，含义是**按数字 DVI 输出处理、跳过 HDMI 的 AVI/VSIF 信息帧**。由于板端像素时序与 PC 完全一致（CRTC `480x800: 60 34860 …700…830` 即 EDID 首选 DTD），"PC 能出图、板子不能"的差异只剩**信息帧**与 **TMDS 信号裕量**两处，而该标志只去掉前者，故可把两条根因**二选一**。它与既有结论不冲突：`video=` 不做的是"覆盖 EDID 首选模式"（模式选择轴），`D` 影响的是信令方式轴。**前提**：本厂商驱动是否采用该标志尚未验证——必须比对 dmesg 的 `select vic 0 use hdmi14 vsif` 行有无变化；若不变，则本次结果无效，不能据此否定信息帧假设。做法与判读见 [历史记录：AI_SESSION_HANDOFF_2026-09-23.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/handoff/AI_SESSION_HANDOFF_2026-09-23.md) §2.6。
 
 **证据与限制**：显示器交叉测试（板子 → PC 显示器、同一根绿联线）的结论目前为**项目所有者报告**，尚未由本会话独立复核；它不影响"换屏"决定的成立（屏在 PC 端可用、板端不可用这一对照本身已足够），但补做该测试可把责任划分做得更严密。运行记录见 `test-worksheets/runs/2026-09-23-zero3w-display-link-retest.md` 与 `test-worksheets/runs/2026-09-23-zero3w-panel-no-image.md`。
 

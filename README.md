@@ -33,6 +33,8 @@ A P0 physical character-Host project for toy/model props. Software fixtures and 
 
 本仓是设备感知与角色 Host 的组合工程；OCLive 通用运行时和角色包契约仍由主仓维护。
 
+源码构建尚有依赖复现限制：Host 使用同级 OCLive 主仓的路径依赖，现有锁文件不能与任意主仓版本混用；当前相邻主仓下的 `--locked` 验证仍要求更新锁文件。本仓尚未冻结一组可独立复现的依赖与 CI，处理入口见[技术债 `GS-CI-001`](docs/TECHNICAL_DEBT.md)。此限制不因文档整理而解除。
+
 ## 反馈与许可
 
 欢迎提交[体验建议与问题](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/issues)，请区分软件回放观察与真实设备测试结果。软件许可见 [LICENSE](LICENSE)，第三方素材和硬件资料分别遵循其来源声明。
