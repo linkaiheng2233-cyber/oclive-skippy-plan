@@ -3,7 +3,7 @@
 **状态**：EVIDENCE / 关闭 `GS-HW-002`  
 **唯一职责**：记录换用品牌 Mini HDMI 线后的视频链四项判据复测结果、原始证据与遗留项。  
 **上游**：`../PROJECT_BASELINE.md`、`2026-09-11-zero3w-first-bringup.md`、`../TECHNICAL_DEBT.md` 的 `GS-HW-002`  
-**下游**：`TECHNICAL_DEBT.md`（关闭该债）、`ORANGE_PI_BRINGUP_WORKSHEET.md`（`OPZ-B01`/`OPZ-D01` 回填）、`PROJECT_BASELINE.md`（事实表）、`handoff/AI_SESSION_HANDOFF_2026-09-23.md`
+**下游**：`TECHNICAL_DEBT.md`（关闭该债）、`ORANGE_PI_BRINGUP_WORKSHEET.md`（`OPZ-B01`/`OPZ-D01` 回填）、`PROJECT_BASELINE.md`（事实表）、[历史记录：AI_SESSION_HANDOFF_2026-09-23.md](https://github.com/linkaiheng2233-cyber/oclive-skippy-plan/blob/4f52b3e04ca849cd702bf6c1b2996d2c52e728a1/docs/handoff/AI_SESSION_HANDOFF_2026-09-23.md)
 
 ## 1. 运行身份
 
