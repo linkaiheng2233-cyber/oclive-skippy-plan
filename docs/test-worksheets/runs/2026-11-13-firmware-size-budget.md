@@ -183,7 +183,48 @@ MEM assets_loaded heap=243032 psram_free=7439160
 1. **Rust 内核的堆预算必须按 ≤30 KB 设计**（PerceptionState 克隆在 100 Hz 下要另算）。
 2. **"第二块 MCU 专做 BLE"从最后选项升级为值得认真评估**：可省 **577 KB flash + 68 KB RAM**，是单项最大收益。
 
-## 9. 剩余待办
+## 10. CP1b：内核体积与堆（2026-11-14，代理目标 + 主机探针）
+
+Xtensa 工具链（`espup`）未安装，先用两条不依赖它的路径把 CP1b 的**门限**判掉。
+
+### 10.1 体积（交叉编译到 `thumbv7em-none-eabihf`，32 位 no_std 代理）
+
+`cargo build --release --no-default-features --target thumbv7em-none-eabihf`，用 `llvm-size -A` 逐函数段求和（rlib 内的 `.rmeta` 元数据不计入固件）：
+
+| crate | `.text` | `.rodata` |
+|---|---|---|
+| `ailive-gun-spirit-contracts` | **77,478 B (75.7 KB)**，231 个函数段 | 8,657 B |
+| `ailive-gun-spirit-perception-core` | **17,614 B (17.2 KB)**，53 个函数段 | 661 B |
+| **合计代码** | **≈95 KB** | ≈9 KB |
+
+### 10.2 堆（主机探针 `scripts/heap-probe.ps1`）
+
+工作区 `forbid(unsafe_code)`，计数分配器无法放在仓库内，因此探针源码放 `scripts/heap-probe/main.rs`（不参与 workspace 构建），由脚本复制到临时 crate 编译运行。
+
+单节点 profile、8 帧观测（握持/运动/姿态/主控触点/冲击）：
+
+```
+KERNEL_HEAP peak=2978 held=854 with_clone_peak=2978 samples=8
+```
+
+| 指标 | 值 | 预算 | 占用 |
+|---|---|---|---|
+| **内核堆峰值** | **2,978 B** | 20 KB | **15%** |
+| 稳态持有 | 854 B | — | — |
+| 状态克隆是否抬高峰值 | **否**（仍 2,978 B） | — | — |
+
+### 10.3 判据结论
+
+| 门 | 预算 | 实测 | 结论 |
+|---|---|---|---|
+| Flash（内核代码） | 338 KB | **≈95 KB** | ✅ 占 28%，余 ≈243 KB |
+| 内部堆（内核） | 20 KB | **≈3 KB** | ✅ 占 15%，余 ≈17 KB |
+
+**保守修正**：代理目标是 ARM thumb 而非 Xtensa（体积可能 ±20–30%）；探针是单节点，五模块形态按线性外推约 6–9 KB。**两项都仍远低于预算**，故"内核上板"在空间上成立。
+
+**后续**：`espup install` 后做真 Xtensa 构建，取最终数字（阻塞项：工具链下载较大）。
+
+## 11. 剩余待办
 
 1. **上板验证资产管线**（上面那条）。
 2. 射频下真实堆（用 E 版实测，补 `ESTIMATED` 的 30–50 KB）。
