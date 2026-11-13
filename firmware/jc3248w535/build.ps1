@@ -2,7 +2,9 @@ param(
     [string]$ToolRoot = (Join-Path $env:LOCALAPPDATA 'OCLive\jc3248w535'),
     [string]$VendorSketch,
     [string]$MumuRole,
-    [string]$AssetPython
+    [string]$AssetPython,
+    # 附加编译宏，例如 "-DDIAG_RADIO"。用于把 Wi-Fi/BLE 协议栈链进来测体积与内存。
+    [string]$ExtraDefines
 )
 
 $ErrorActionPreference = 'Stop'
@@ -79,6 +81,9 @@ if (-not (Test-Path -LiteralPath $core -PathType Container) -or
 
 $board = 'esp32:esp32:esp32s3:FlashSize=16M,FlashMode=qio,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc,PartitionScheme=fatflash'
 $lvglFlags = '-MMD -c -DLV_CONF_INCLUDE_SIMPLE -I"' + $sketch + '"'
+if ($ExtraDefines) {
+    $lvglFlags = $lvglFlags + ' ' + $ExtraDefines
+}
 & $cli compile --fqbn $board --build-path (Join-Path $ToolRoot 'build') --output-dir $output `
     --build-property "compiler.c.extra_flags=$lvglFlags" `
     --build-property "compiler.cpp.extra_flags=$lvglFlags" `

@@ -1,8 +1,22 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/task.h>
 #include <inttypes.h>
 #include <string.h>
+
+// 诊断用：把 Wi-Fi / BLE 协议栈单独或一起链进来，量化各自的 flash 与静态 RAM 代价。
+// 生产构建不定义任何 DIAG_* 宏。
+#if defined(DIAG_WIFI) || defined(DIAG_BLE) || defined(DIAG_RADIO)
+#define DIAG_ANY_RADIO 1
+#endif
+#ifdef DIAG_WIFI
+#include <WiFi.h>
+#endif
+#ifdef DIAG_BLE
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#endif
 
 #include "display.h"
 #include "esp_bsp.h"
@@ -102,11 +116,92 @@ void report_ready() {
     Serial.println(display_ready ? "READY JC3248W535 1" : "ERR DISPLAY_INIT");
 }
 
+// 诊断：打印内部堆 / PSRAM / 最大可用块 / DMA / 任务栈水位。
+// 只读，不改变任何运行状态；用于 CP1b 的空间实测。
+void report_memory(const char *tag) {
+    Serial.printf(
+        "MEM %s heap=%u min=%u internal=%u largest=%u dma=%u psram_free=%u psram_total=%u stack_hwm=%u\n",
+        tag,
+        static_cast<unsigned>(ESP.getFreeHeap()),
+        static_cast<unsigned>(ESP.getMinFreeHeap()),
+        static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+        static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+        static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_DMA)),
+        static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)),
+        static_cast<unsigned>(ESP.getPsramSize()),
+        static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
+}
+
 void handle_command(const char *command) {
     if (strcmp(command, "PING") == 0) {
         report_ready();
         return;
     }
+
+    // 诊断命令不需要显示就绪
+    if (strcmp(command, "MEM") == 0) {
+        report_memory("idle");
+        return;
+    }
+#ifdef DIAG_ANY_RADIO
+    if (strncmp(command, "RADIO ", 6) == 0) {
+        const char *arg = command + 6;
+#ifdef DIAG_WIFI
+        if (strncmp(arg, "WIFI", 4) == 0) {
+            const char *p = arg + 4;
+            while (*p == ' ') {
+                ++p;
+            }
+            const char *separator = strchr(p, ' ');
+            if (separator == nullptr) {
+                Serial.println("ERR ARGS need: RADIO WIFI <ssid> <pass>");
+                return;
+            }
+            char ssid[33] = {0};
+            char pass[65] = {0};
+            size_t ssid_length = static_cast<size_t>(separator - p);
+            if (ssid_length > 32) {
+                ssid_length = 32;
+            }
+            memcpy(ssid, p, ssid_length);
+            strncpy(pass, separator + 1, sizeof(pass) - 1);
+            Serial.println("RADIO WIFI connecting");
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(ssid, pass);
+            const unsigned deadline = millis() + 20000;
+            while (WiFi.status() != WL_CONNECTED && millis() < deadline) {
+                delay(100);
+            }
+            const bool connected = WiFi.status() == WL_CONNECTED;
+            Serial.printf("RADIO WIFI connected=%d status=%d\n", connected ? 1 : 0,
+                          static_cast<int>(WiFi.status()));
+            report_memory(connected ? "after_wifi_ok" : "after_wifi_fail");
+            return;
+        }
+#endif
+#ifdef DIAG_BLE
+        if (strcmp(arg, "BLE") == 0) {
+            BLEDevice::init("GS-DIAG");
+            BLEDevice::createServer();
+            BLEAdvertising *advertising = BLEDevice::getAdvertising();
+            advertising->start();
+            Serial.println("RADIO BLE advertising as GS-DIAG");
+            report_memory("after_ble");
+            return;
+        }
+#endif
+#ifdef DIAG_WIFI
+        if (strcmp(arg, "OFF") == 0) {
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+            report_memory("after_wifi_off");
+            return;
+        }
+#endif
+        Serial.println("ERR RADIO subcommand unsupported in this build");
+        return;
+    }
+#endif
 
     if (!display_ready) {
         Serial.println("ERR DISPLAY_INIT");
