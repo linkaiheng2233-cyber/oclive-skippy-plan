@@ -1,7 +1,8 @@
 # A.I.Live-ai枪娘器灵技术债与审查台账
 
 **SSOT 范围**：本文件只记录可复现的工程风险、技术债、门禁缺口与关闭条件；不复制路线或硬件参数。  
-**最后更新**：2026-10-12  
+**最后更新**：2026-11-13
+
 **状态**：Current  
 
 ## 1. 审查基线
@@ -25,6 +26,8 @@
 历史限制说明（保留）：上轮结论基于 `HEAD f3c5642` 加未提交工作树，只能证明当前工作树，不能冒充该 SHA 或远端 CI 证据。表格中的 14 项是那一轮工程审查开始时的历史基线。
 
 **2026-09-23 更新（`GS-P0-BL-2026-09-23` 基线门禁）**：已在**干净工作树、绑定提交 `ca7bdf7`** 上重跑 `./scripts/verify.ps1`，全流程 **PASS**（3 包 fmt、workspace/依赖边界 3 members、严格 Clippy、all-targets 测试、doctest、Schema 零漂移、`cargo audit` 含 1 条允许的 `chacha20 0.10.1` yanked 警告）。本周期改动全部为 `AGENTS.md` 与 `docs/`——**代码与依赖零变更**，故上一轮"30 项测试 / 298 依赖"的量化结论继续沿用，未在本文重复计数。
+
+**2026-11-13 复跑。** 在干净的器灵仓 `8b71e0d` 与相邻 OCLive 工作树 `90677e53` 上，用 PowerShell 7.6.9（UTF-8 控制台）运行 `./scripts/verify.ps1`。三个包格式、workspace 边界、Clippy、42 项 all-targets 测试、doctest 和 Schema 零漂移通过。`cargo audit` 0.22.2 检出一项漏洞及三项工具报告为 allowed 的警告，脚本退出码 1。`cargo tree --workspace --locked -e features -i libsqlite3-sys` 确认 Windows 工作区经 `sqlx-sqlite 0.8.6` 启用了 SQLite `bundled`。受影响条件涉及打开可由低信任方写入的 SQLite 数据库及对应 WAL，应用是否有可达入口仍待单独核查。 [RustSec 公告](https://rustsec.org/advisories/RUSTSEC-2026-0459.html)
 
 ## 2. 当前台账
 

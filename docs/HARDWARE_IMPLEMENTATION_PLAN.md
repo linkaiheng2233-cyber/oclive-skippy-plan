@@ -64,7 +64,7 @@
 - 第 8 页示意图选了 8MB Flash、关闭 USB CDC，但厂商规格是 16MB Flash；实机先读取容量，再配置 Flash、分区和原生 USB CDC，不照抄截图。
 - 原厂示例给出 Arduino-ESP32 3.0.2、LVGL 8.x（README 要求 >=8.3.9、<9）。MJPEG 章节要求替换工具链以使用 120MHz PSRAM，这是视频演示的特定操作，**不作为基础 UI 起步要求**。
 - `DEMO_PIC/MJPEG/MP3` 依赖 TF 卡和对应目录，缺卡黑屏不等于屏幕故障；先跑不依赖这些素材的 LVGL 例程。
-- 官方 GitHub `Guition-JC/Guition` 的 `jc3248w535/board_info.yaml` 标为 `hardware unverified`；本轮快照提交 `cc16562bc184676edaa2a61f5263dff854dec7a3` 的触摸 YAML 写 `0x76`，与原厂例程的 7 位地址 `0x3B` 不同，**不得无核对地当作可运行 BSP**。
+- 官方 GitHub `Guition-JC/Guition` 的 `jc3248w535/board_info.yaml` 标为 `hardware unverified`。该快照的 `board_devices.yaml` 按 Board Manager 约定填写左移一位的 `i2c_addr: [0x76]`，对应原厂例程的 7 位地址 `0x3B`。触摸驱动应按所用 API 传入对应格式，BSP 仍待上板验证。 [乐鑫 Board Manager 触摸地址格式](https://docs.espressif.com/projects/esp-board-manager/en/latest/references/devices/lcd-touch.html)
 - 厂商“约 150mA / 约 80g”缺少完整负载/附件条件。150mA 是电流，不是功率；80g 也不直接作为裸板重量。亮度、刷新率、续航、完整厚度均不作已验证承诺。
 
 资料入口：[官方产品页](https://www.guition.com/esp32-display-module/3-5-inch-esp32s3-display-module)、[原厂资料包](https://pan.jczn1688.com/directlink/1/HMI%20display/JC3248W535EN.zip)、[官方 BSP 快照](https://github.com/Guition-JC/Guition/tree/cc16562bc184676edaa2a61f5263dff854dec7a3/components/board/guition_boards/jc3248w535)。
@@ -90,12 +90,12 @@
 
 | # | 约束 | 依据与做法 |
 |---|---|---|
-| 1 | **电池采样满电段可能饱和** | GPIO5 分压比 0.752（R26 33 kΩ 上臂 / R27 100 kΩ 下臂）：4.2 V → 约 3.16 V，已在 S3 高衰减有效范围上沿之外。固件动作：用 12 dB 衰减 + **两点标定**；对超阈值**直接判「满」**而不插值；**不得输出百分比**。进电前先与万用表比对。 |
-| 2 | **立绘进 `ffat` 的写入与回退** | `ffat`（`0x410000`，11.875 MiB）在 11-13 备份中 3,040 扇区全 `0xFF`，可用。但 `flash-prototype.py` 目前只写 `app1`，需新增：① 生成并写入 FAT 镜像；② **写入前读扇区确认仍全 `0xFF`**；③ `--ffat-wipe` 还原。**`--factory` 只切启动项、不清 ffat**，残留数据落在出厂程序可见范围内。 |
-| 3 | **标识符长度上限 = 128 字节** | `contracts` 的 `NodeUid` / `BootId` 都是 `string_id!(…, 128)`。设备侧 `boot_id`（建议 `bt-<MAC 后 3 字节>-<启动计数>`）与事件 ID 命名必须落在该上限内，否则**首条消息即被契约校验拒绝**。 |
-| 4 | **图库验收前必须切回 `app1`** | 样机当前运行出厂 `app0`（2026-11-13 实测 `PING` / `GET STATE` 无回应）。直接跑 `test-usb.ps1 -CheckGallery` 会全部超时，易被误判成固件故障；先进入下载模式切换启动项再验收。 |
+| 1 | **电池采样高电压段可能饱和** | 按 V1.0 图纸，GPIO5 分压后 4.2 V 约为 3.16 V，高于 S3 高衰减有效量程。接入电池路线前按供电计划核对硬件。固件优先验证量程内两点标定与低电阈值，饱和区只可报告超量程，充满状态需要独立的充电终止证据。 [供电方案](MAIN_POWER.md#p0-a晶彩一体板供电候选) |
+| 2 | **`ffat` 是素材迁移候选** | `ffat`（`0x410000`，11.875 MiB）在 11-13 出厂备份中全为 `0xFF`。该结果只覆盖备份时点。若实构建发现容量不足，再复核板上分区、现存数据、写入与回退方案。现有 `flash-prototype.py` 写入 `app1` 并更新启动选择，`--factory` 恢复启动选择。 [固件说明](../firmware/jc3248w535/README.md#实机验收) |
+| 3 | **标识符长度上限为 128 UTF-8 字节** | `contracts` 中的 `NodeUid`、`BootId`、`ObservationId` 和 `EventId` 受此上限约束。设备启动会话的生成和映射是协议候选，要验证重启、重复和状态新鲜度。 [Rust 契约](../crates/ailive-gun-spirit-contracts/src/lib.rs) |
+| 4 | **图库验收使用 `app1`** | 2026-11-13 最后一次操作已选择出厂 `app0`，原型 `PING` 未回，恢复后的出厂画面待现场确认。要验图库，先按固件说明通过现有镜像选择并启动 `app1`，再运行 `test-usb.ps1 -CheckGallery`。 [实机记录](test-worksheets/01-硬件到货清单.md#p0-a-沐沐情绪切换2026-11-13) |
 
-**集成路线的结构性提醒（未决）**：把带 `std` 的 Rust 静态库链进 Arduino sketch **不能靠「配置对齐」实现**——`esp-idf-sys` 会自行构建整棵 ESP-IDF，与 Arduino-ESP32 3.0.2 自带的 IDF 5.1.4 预编译库符号重复。可行路线只有三条：① **`no_std` 化**（内核时间已由调用方注入，`Vec` 上限 4/8，改造面小）；② **纯 IDF-Rust 应用**（需处理 IDF 5.1.4 与厂商 IDF 示例要求 6.1 的版本差）；③ 板上重写等价 C++（出现两套实现，与 ADR-069「共享内核」冲突，须改 ADR）。**验证顺序建议 ① → ②，不要在验证前投入 ② 或 ③。**
+**集成路线待验证。** 保留 Arduino/LVGL 时优先评估共享内核的 `no_std` 候选。桌面对拍验证语义等价，仍需 ESP32-S3 目标编译、最小 C ABI 链接和板上回放来检查运行时、镜像尺寸及内存。若考虑把 `std` 库链接进 Arduino，先查 `esp-idf-sys` 与 Arduino 的 IDF 版本及符号是否重叠。独立 ESP-IDF/Rust 应用可作为共享内核的备选；任何新状态机实现需要重新评估 ADR-069。 [执行检查点](handoff/AI对接文档.md#5-下一步计划) · [Rust ESP-IDF 目标说明](https://doc.rust-lang.org/rustc/platform-support/esp-idf.html)
 
 ### 0.2 旧分体设计参考（被 §0.1 覆盖的采购项不得重复下单）
 
