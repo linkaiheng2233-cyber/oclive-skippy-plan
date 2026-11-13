@@ -229,7 +229,7 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 |---|---|---|
 | **M1** | ✅ 完成 | `ailive-gun-spirit-protocol` 的 `codec`/`state`/`event` 模块；协议测试 17 → **30 项** |
 | **M2** | ✅ 完成 | `bench.rs` 会话状态机（7 项单测）+ `ailive-gun-spirit-bench --simulate` **PASS**：`hello=1 states=2 states_rejected=1 events_new=2 events_dup=1 malformed=1` |
-| **M3** | ⏳ **代码完成；验证工具就绪，待一次物理按键** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。**验证通道**：`scripts/serial-bridge.ps1`（串口↔TCP，自测 PASS）+ `ailive-gun-spirit-bench --tcp` |
+| **M3** | ✅ **已上板验证通过（2026-11-14）** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。**验证通道**：`scripts/serial-bridge.ps1`（串口↔TCP，自测 PASS）+ `ailive-gun-spirit-bench --tcp` |
 | M4 | 待做 | 前置已就绪（shim 链接验证通过） |
 | M5 | 待做 | — |
 
@@ -259,6 +259,19 @@ hex = 01000003000E626F6172642D3030303030302D310100000000000000000000000000000000
 
 **注意**：`produced_at` 与 `revision` 会随时间变化，比对时应看**长度**与**字段偏移**，而不是整串相等。
 
+
+**上板验证结果（2026-11-14，`MEASURED`）**
+
+| 项 | 结果 |
+|---|---|
+| 烧录 | 1,552,960 B 写入 `app1`，回读 digest 一致，出厂 `app0` 保持可用 |
+| `WIRE on` | `WIRE on boot_id=board-0684C7-1`（14 字符，与对照向量长度一致） |
+| **端到端** | 台架 → TCP:47921 → 串口桥(COM3) → 板端 → 回传：**`hello=1 states=15`**（12 秒内每秒一帧 STATE，全部解码成功、revision 单调） |
+| **ASCII 回退** | 帧模式下发送 `WIRE off` 命中转义 → 板子打印 `WIRE off`；随后 `PING` → `READY JC3248W535 1`、`GET STATE` → `OK CURRENT happy` |
+| **下行表达** | 台架在会话中发出的 `EXPR happy` **确实生效**（`GET STATE` 返回 happy），证明 PC→板方向可用 |
+
+⇒ **M1 / M2 / M3 全部完成并验证**：协议编解码、台架程序、板端帧协议（含 ASCII 回退）均可用。
+
 **静态对照已通过（2026-11-14，无需硬件）**：按 `gs_wire.cpp` 的 `publish_state()` 逐字段重建字节（`boot_id="board-000000-1"`、`revision=1`、`produced=0`、六 fact 全 Unknown），
 与 Rust 权威向量**逐字节一致**，长度同为 **97**。⇒ C++ 与 Rust 两套编码在字段顺序、端序、fact 布局上没有错位；上板只需确认运行期行为（分帧、重同步、每秒发布）。
 
@@ -278,6 +291,7 @@ hex = 01000003000E626F6172642D3030303030302D310100000000000000000000000000000000
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 
 
 
