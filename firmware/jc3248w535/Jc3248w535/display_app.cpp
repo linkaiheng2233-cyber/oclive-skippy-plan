@@ -280,6 +280,15 @@ void handle_command(const char *command) {
         }
 #endif
 #ifdef DIAG_WIFI
+        // 不提供凭据，只把 Wi-Fi STA 协议栈初始化起来，用于测量协议栈本身的 RAM 代价。
+        // 注意必须用 "STA" 而不是 "WIFISTA"：后者会被上面的 "WIFI" 前缀分支截获。
+        if (strcmp(arg, "STA") == 0) {
+            WiFi.mode(WIFI_STA);
+            WiFi.disconnect();
+            Serial.println("RADIO WIFISTA initialized (no credentials)");
+            report_memory("after_wifista");
+            return;
+        }
         if (strcmp(arg, "OFF") == 0) {
             WiFi.disconnect(true);
             WiFi.mode(WIFI_OFF);

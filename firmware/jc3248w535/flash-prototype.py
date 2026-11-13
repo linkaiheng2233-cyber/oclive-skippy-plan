@@ -147,7 +147,7 @@ def main():
             esptool.write_flash(esp, [(FFAT_START, assets)], no_progress=True)
             esptool.verify_flash(esp, [(FFAT_START, assets)])
             print(f"Asset blob written to ffat region ({len(assets)} bytes).", flush=True)
-            restart(esp)
+            # 故意不复位：保持在 stub，便于紧接着再用 --image 烧固件（无需二次按键）。
             return
 
         if args.factory:
