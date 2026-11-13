@@ -4,6 +4,8 @@
 
 本项目由两个平级薄核协作。枪械感知内核把连续、嘈杂的物理信号转换成稳定载体事实；OCLive内核把事实与角色状态结合并生成表达。枪械感知内核是wargame发射器/枪械交互的特化，不是OCLive角色内核的特化，也不是硬件驱动集合或第二套角色编排器。
 
+P0-A 按 [ADR-069](DECISIONS.md#adr-069p0-a-由-esp32-s3-运行感知内核) 把感知内核部署到 ESP32-S3。`SensorObservation` 在板上进入内核，设备快照和变化事件经过 USB 或局域网交给 PC 上的 Host 适配器。OCLive 在 PC 上运行。下图保留了 P0-B 与桌面回放所用的主机内融合路径。
+
 ```text
 Raw sensors
   │  GPIO / ADC / I2C / SPI / mock input
@@ -27,9 +29,9 @@ Gun Perception Kernel
                        RoleCue ───────→ output arbiter
 ```
 
-两个内核源码与依赖分离：感知内核位于本仓独立纯Rust crate，不依赖OCLive；OCLive也不依赖感知内核。P0由同一个`ailive-gun-spirit-host`进程部署，只有最外层bridge/composition root可以同时引用双方并执行显式值转换。两个内核互相不知道，不能共享内部对象、注册表引用或可变状态；边界数据必须可序列化、可记录并可回放。进程隔离只在实测证明需要独立崩溃域、升级或资源调度后增加。
+感知内核是本仓独立 Rust crate。Host 的桥接层负责两个内核之间的值转换，边界数据可序列化、记录和回放。P0-B 和桌面回放可以由 `ailive-gun-spirit-host` 组合，P0-A 由板上感知与 PC 端桥接协作。主机断线只使 PC 缓存的设备状态失效，板上事实仍由本地传感器和新鲜度规则决定。
 
-当前物理输入由两个区域 BLE 节点承担：前下导轨节点包含载体参考 IMU 与前握 FSR，后握把节点包含后握 FSR 与后续只读 trigger 辅助输入。区域内部允许隐藏短线，区域之间不拉线。一体式显示主机舱具有独立 yaw/pitch/roll 三轴，屏幕与 Linux 主机一同转动；载体参考 IMU 固定在前下导轨节点，任何调屏动作都不得进入载体 motion 观察，否则会污染 Held/Ready 判定。HDMI 视频线完全留在移动舱内。当前硬件、电源、机械和故障链路 SSOT 见 `HARDWARE_IMPLEMENTATION_PLAN.md`。
+P0-A 的外接 IMU 与晶彩板由附件内短线相连，试装见 [硬件计划 §0.1.2](HARDWARE_IMPLEMENTATION_PLAN.md#012-单板传感器与电脑无线连接)。P0-B 使用两个区域 BLE 节点。前下导轨节点包含载体参考 IMU 与前握 FSR，后握节点承担后握与只读辅助输入。P0-B 的三轴显示舱容纳屏幕与 Linux 主机，载体参考 IMU 固定在导轨侧。硬件、电源和机械细节见 `HARDWARE_IMPLEMENTATION_PLAN.md`。
 
 ## 2. 枪械感知内核边界
 
@@ -126,7 +128,7 @@ sensor 的默认副作用策略：
 
 ## 5. OCLive桥接与输出边界
 
-屏幕由`ailive-gun-spirit-host`的Output Arbiter唯一控制，两个内核都不能直接访问renderer或显示设备：
+联机角色表达由 `ailive-gun-spirit-host` 的 Output Arbiter 仲裁。P0-A 的板侧 UI 负责实际渲染、即时状态反馈与离线预设，感知内核与 OCLive 通过语义数据与 UI 交互。主机侧表达的既有路径如下。
 
 ```text
 PerceptionState / LifecycleEvent ─→ SystemViewState / SystemCue ─┐

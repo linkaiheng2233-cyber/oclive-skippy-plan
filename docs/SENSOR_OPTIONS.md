@@ -1,8 +1,37 @@
 # 传感器候选方案与实测路线
 
 **SSOT 范围**：本文负责传感器作用、候选与升级门；当前节点拓扑、电路起点和参数以`HARDWARE_IMPLEMENTATION_PLAN.md`为准。
-**最后更新**：2026-08-27
+**最后更新**：2026-11-13
 **状态**：Current
+
+## P0-A：单板传感器设计候选
+
+`CANDIDATE`，待台架与实物验证。首件按 **IMU → 后握 FSR → 按需增加前握 FSR** 的顺序。屏上板承担采样和感知，传感器共享该板的 3.3 V/GND。传感器线收在附件内，附件与电脑走 Wi-Fi。 [硬件接口](HARDWARE_IMPLEMENTATION_PLAN.md#012-单板传感器与电脑无线连接) · [候选布局](MECHANICAL_INTERFACE.md#p0-a悍迪-191-原型布置候选)
+
+### IMU 与装配校准
+
+1. 首选带原理图、支持 3.3 V I²C 的 ICM-42688-P 小板，QMI8658 为候选。用 P3 或 P4 的 3.3 V/GND/GPIO17/GPIO18。从同一条四芯线引出，初试可配置 GPIO17 为 SDA、GPIO18 为 SCL。确认模块上拉到 3.3 V，以及实际插座针序与线束两端的通断。芯片封装尺寸和含插头的小板尺寸分别记录。 [TDK 器件资料](https://www.invensense.tdk.com/en-us/products/6-axis/icm-42688-p)
+2. 原厂触摸驱动使用 `I2C_NUM_0` 和 GPIO4/8。IMU 初试用另一硬件控制器，以 100 kHz 启动，验证触摸与 IMU 可同时工作。扫描外接总线、记录地址，再读取 `WHO_AM_I` 寄存器 `0x75`，ICM-42688-P 预期为 `0x47`。原始六轴可从 100 Hz 起做诊断，同时记录实际间隔与超时，再按实测定滤波参数。 [乐鑫 I²C 控制器说明](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/i2c.html) · [TDK 寄存器手册](https://product.tdk.com/system/files/dam/doc/product/sensor/mortion-inertial/imu/data_sheet/ds-000347-icm-42688-p-v1.6.pdf)
+3. 固定在导轨底座的小硬座后，标记装配坐标 +X 向前、+Y 向左、+Z 向上。用各面静置及缓慢转动验证轴符号。记录装配版本、静止偏移和零偏，再显式采样放低与举起两姿态。底座或 IMU 朝向改变时重验校准；移动造成重力估计质量不足、总线掉线或观测过期时，对应事实进入 `unknown`。 [状态机源码](../crates/ailive-gun-spirit-perception-core/src/reducer.rs)
+4. IMU 实机验证运动、静止与重力姿态。第二步加上后握后，可由明确的后握接触判 `Held`，与校准后的举起姿态合成 `Ready`。完整 `Standby` 需要前后握都明确松开且静止持续达到门限。首轮缺少的握持事实保持 `unknown`，用桌面或板端回放覆盖其余状态。 [状态机源码](../crates/ailive-gun-spirit-perception-core/src/reducer.rs)
+
+### 握持片、走线与断线判定
+
+- 后握先用可拆薄套内的一片 FSR。用纸胶带找掌心接触点，以局部平整刚性背托保持膜片平整，受力层按「手 → 薄套外皮 → 小弹性压垫 → FSR → 背托」。先试 402 类圆片（有效区约 Ø12.7 mm）或等价同类薄膜，有明显手位盲区再比较窄条。检查空载预压和弯曲造成的基线漂移，尾片接插件按实际料号选。 [Interlink 集成指南](https://www.interlinkelectronics.com/downloads/integration-guides/fsr-400-series-integration-guide.pdf)
+- 压片在握把，分压、滤波与 ADC 转接板放在板屏壳内。回来的两芯线受套件盖线槽保护，模拟线沿途远离电源转换区域，握套可单独拔插。P2 第 2 脚为 GPIO6（ADC1 候选），第 3 脚为 GPIO7（留给前握）。P2 的 8 芯线只有信号，供电和地从另一只 P3/P4 引来。 [原理图接口核对](HARDWARE_IMPLEMENTATION_PLAN.md#011-原厂手册核对2026-11-09)
+- 若要把拔线和松手分开，首轮用末端电阻方案试验。把 `220 kΩ` 与 FSR 并在传感器端、放在可拔线束之后；板端串 `10 kΩ`，ADC 节点用 `47 kΩ` 下拉，可评估在 ADC 边加 `100 nF` 去噪。以 3.3 V 计算，拔线近 0 V、完好松开约 0.56 V（FSR 空载电阻很高时）、重压趋近 2.72 V。初测用万用表和校准过的 ADC 核对窗口，再按实测设断线窗口、握持/释放双阈值及去抖。该接法主要区分开路，线束两芯短接可能与强握落在同一窗口。 [乐鑫 ADC 校准与去噪](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/adc/adc_calibration.html)
+
+```text
+3.3 V → 10 kΩ → 两芯线去程 →（FSR ∥ 220 kΩ）→ 两芯线回程 → ADC 节点
+ADC 节点 → GPIO6
+ADC 节点 → 47 kΩ → GND
+```
+
+先量四组曲线，分别为裸手、手套、放置轻碰和拔插。位置稳定后沿用既有抽样门，做左右手裸手和手套各 25 次，再做 50 次负样本。以正样本总成功率 ≥95%、各组 ≥90%、负样本误判 ≤1/50、释放不卡住及拔线进入 `unknown` 为样件验收起点。若某组明显漏报，先换压片位置和垫片，再决定是否加第二接触点。前握片只有在需要独立前手证据、双手识别或完整 `Standby` 时加入。 [测试表 §B/C](test-worksheets/03-无线传感节点测试表.md)
+
+若后握到屏壳之间没有可维护的遮护线槽，当前样件维持板屏加 IMU，后握保持 `unknown`。需要后握交互时再比较把 FSR、BLE 和小电池集中在可拆后握底盒的方案。底盒能省去跨区线束，会增加第二块电池、充电和掉线管理，需按原有多节点方案单独评审。 [机械布局](MECHANICAL_INTERFACE.md#p0-a悍迪-191-原型布置候选)
+
+以下双区域 BLE 方案用于 P0-B。
 
 ## 1. 当前 P0 组合
 

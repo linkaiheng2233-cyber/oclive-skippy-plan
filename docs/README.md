@@ -67,7 +67,7 @@
 | `DISPLAY_SELECTION.md` | 屏幕与显示接口选择 |
 | `DISPLAY_ASSEMBLY.md` | 三轴屏幕舱、线缆、受力和维护结构 |
 | `TERMINAL_ENCLOSURE_VISUAL_V0_1.md` | 终端外观与层叠方向；不替代电气/热真源 |
-| `MAIN_POWER.md` | 主机舱电源、充放电和关机能源链 |
+| `MAIN_POWER.md` | 晶彩一体板和独立主机舱的电源、充放电与测量 |
 | `POWER_BUDGET.md` | 前后BLE节点电池与功耗 |
 | `SENSOR_OPTIONS.md` | FSR、IMU等传感器候选和选择依据 |
 | `WIRELESS_SENSOR_NETWORK.md` | BLE节点拓扑、协议与降级 |
@@ -77,6 +77,7 @@
 ## 6. 验证与原始证据
 
 - `test-worksheets/`保存到货、板屏、节点、电源、机械和体验测试表。
+- [晶彩板屏传感器、供电与装配试验表](test-worksheets/P0-A-晶彩板屏台架与装配.md)记录 P0-A 首件的布局、IMU、后握片及供电测试。
 - `test-worksheets/runs/`保存**每次实机运行**的规范记录（运行身份、`MEASURED`/`UNKNOWN` 分级、判定、证据位置、下一步）。首轮：`test-worksheets/runs/2026-09-11-zero3w-first-bringup.md`。
 - 测试照片、串口、功耗和温度原始数据进入每次测试的证据目录，不写进ADR正文。
 - `DATASHEET`、`ESTIMATED`、`MEASURED`、`DECIDED`和`UNKNOWN`不得混用。

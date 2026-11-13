@@ -24,6 +24,8 @@
 
 ## 3. 推荐顺序
 
+当前 P0-A 晶彩板屏请先用[传感器、供电与装配试验表](P0-A-晶彩板屏台架与装配.md)。下列 Orange Pi、双 BLE 节点与三轴舱步骤用于 P0-B。
+
 0. 先读`../PROJECT_BASELINE.md`和`../HARDWARE_ENGINEERING_GUIDE.md`；“已到货”只记为`REPORTED_RECEIVED`，不得直接等同于型号/电气/兼容性通过。
 1. 按`采购核对清单.md`逐项对照实物；填`01-硬件到货清单.md`，拍六面照片，核对丝印、批次、接口、电压和包络。身份不明或受损件隔离，不进入首次上电。
 2. 按`02-主机与屏幕测试表.md`及仓库`ORANGE_PI_BRINGUP_WORKSHEET.md`完成Orange Pi、HDMI、触摸、Linux和OCLive。
