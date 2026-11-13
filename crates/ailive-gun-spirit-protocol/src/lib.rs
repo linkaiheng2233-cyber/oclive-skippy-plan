@@ -19,6 +19,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod payload;
+
 /// 线首两字节："GS"。
 pub const MAGIC: [u8; 2] = [0x47, 0x53];
 /// 当前协议版本。
