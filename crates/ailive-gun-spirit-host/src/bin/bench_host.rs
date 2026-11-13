@@ -222,6 +222,8 @@ fn run_tcp(address: &str, seconds: u64) -> bool {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
     let mut buffer = [0u8; 4096];
     let mut pending: Vec<u8> = Vec::new();
+    // 只在首次收到状态后发一次表情：否则"收帧→发表情→再收帧"会形成无限往返。
+    let mut expression_sent = false;
     while std::time::Instant::now() < deadline {
         match stream.read(&mut buffer) {
             Ok(0) => break,
@@ -230,8 +232,10 @@ fn run_tcp(address: &str, seconds: u64) -> bool {
                 let handled = feed(&mut session, &pending);
                 if handled > 0 {
                     pending.clear();
-                    // 握手成功后发一次表情，验证上行通道。
-                    let _ = stream.write_all(&expr);
+                    if !expression_sent && session.snapshot().is_some() {
+                        expression_sent = true;
+                        let _ = stream.write_all(&expr);
+                    }
                 }
             }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
@@ -250,6 +254,86 @@ fn run_tcp(address: &str, seconds: u64) -> bool {
     stats.hellos >= 1 && stats.states >= 1
 }
 
+/// 模拟设备：监听端口，按协议回应 HELLO/STATE/EVENT/EXPR。
+///
+/// 存在的意义：**在没有板子的情况下验证整条 TCP 链路**（M2 的收尾），
+/// 以及给 M3 上板联调提供一个已知正确的对端做对照。
+fn run_serve(listener_address: &str, seconds: u64) -> bool {
+    use std::net::TcpListener;
+    println!("bench: serve {listener_address}");
+    let listener = match TcpListener::bind(listener_address) {
+        Ok(listener) => listener,
+        Err(error) => {
+            println!("  bind failed: {error}");
+            return false;
+        }
+    };
+    let _ = listener.set_nonblocking(true);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
+    let mut served = 0u32;
+    while std::time::Instant::now() < deadline {
+        match listener.accept() {
+            Ok((mut stream, peer)) => {
+                served += 1;
+                println!("  client connected: {peer}");
+                let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(500)));
+                let mut buffer = [0u8; 4096];
+                let mut pending: Vec<u8> = Vec::new();
+                let mut revision = 0u64;
+                let session_deadline =
+                    std::time::Instant::now() + std::time::Duration::from_secs(5);
+                while std::time::Instant::now() < session_deadline {
+                    match stream.read(&mut buffer) {
+                        Ok(0) => break,
+                        Ok(count) => {
+                            pending.extend_from_slice(&buffer[..count]);
+                            let mut offset = 0;
+                            while offset < pending.len() {
+                                match decode(&pending[offset..]) {
+                                    Ok((frame_view, consumed)) => {
+                                        offset += consumed;
+                                        match frame_view.message_type {
+                                            MessageType::Hello => {
+                                                let _ = stream.write_all(&hello_frame());
+                                                revision += 1;
+                                                let _ = stream.write_all(&state_frame(revision));
+                                                let _ = stream.write_all(&event_frame("evt-sim-1"));
+                                            }
+                                            MessageType::Expression => {
+                                                let mut ack = [0u8; 4];
+                                                ack.copy_from_slice(&0u32.to_le_bytes());
+                                                let frame_bytes = frame(MessageType::Ack, &ack);
+                                                let _ = stream.write_all(&frame_bytes);
+                                                revision += 1;
+                                                let _ = stream.write_all(&state_frame(revision));
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
+                            pending.drain(..offset);
+                        }
+                        Err(error)
+                            if error.kind() == std::io::ErrorKind::WouldBlock
+                                || error.kind() == std::io::ErrorKind::TimedOut => {}
+                        Err(_) => break,
+                    }
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(error) => {
+                println!("  accept failed: {error}");
+                return false;
+            }
+        }
+    }
+    println!("  served {served} connection(s)");
+    served > 0
+}
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
     let ok = match args.first().map(String::as_str) {
@@ -265,9 +349,20 @@ fn main() -> ExitCode {
                 .unwrap_or(10);
             run_tcp(&address, seconds)
         }
+        Some("--serve") => {
+            let address = args
+                .get(1)
+                .cloned()
+                .unwrap_or_else(|| "127.0.0.1:47900".to_owned());
+            let seconds = args
+                .get(2)
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(10);
+            run_serve(&address, seconds)
+        }
         Some(other) => {
             eprintln!("unknown mode: {other}");
-            eprintln!("usage: ailive-gun-spirit-bench [--simulate | --tcp <addr> [seconds]]");
+            eprintln!("usage: ailive-gun-spirit-bench [--simulate | --serve <addr> [s] | --tcp <addr> [s]]");
             return ExitCode::from(2);
         }
     };
