@@ -16,7 +16,7 @@
 | 工程门禁 | `8f11476` 上 `./scripts/verify.ps1 -SkipAudit` **PASS**（fmt、workspace 边界、Clippy、all-targets 测试、doctest、Schema 零漂移）。`cargo audit` 仍为 1 项漏洞（`GS-DEP-001`），另有 3 条工具报告为 allowed 的警告。 [命令和结果](../TECHNICAL_DEBT.md#1-审查基线) |
 | **no_std 能力** | **`contracts` 与 `perception-core` 现可在 `no_std` + `alloc` 下编译**；同一 9 帧回放输入在 std 与 no_std+alloc 两种库配置下输出**逐字节相同**（sha256 一致）。CP1 核心判据达成，详见 §6 与 §5。 |
 | 开放审计项 | `GS-DEP-001` / `RUSTSEC-2026-0459`。当前 Windows Host 依赖链经相邻仓 `oclive_sqlx`、`sqlx-sqlite 0.8.6` 引入 bundled `libsqlite3-sys 0.30.1`，修复路径见 §4。 [技术债台账](../TECHNICAL_DEBT.md#2-当前台账) · [RustSec 公告](https://rustsec.org/advisories/RUSTSEC-2026-0459.html) |
-| 板卡 | 晶彩已点屏，基础触摸和 USB 表情控制通过。图库串口顺序通过，画面和按钮待现场验收。2026-11-13 16:45 最后选择出厂 `app0`，沐沐图库留在 `app1`，出厂画面待现场确认。 [到货与实机记录](../test-worksheets/01-硬件到货清单.md) |
+| 板卡 | **双向联调已通过（2026-11-13 晚）**：只读校验与备份一致；`app1` 图库固件写入回读校验通过并已选中；`PING`/`STATE`/`STEP` 全 `OK`；触屏 `Next,Next,Prev` 回传 `TOUCH 1..3` 与对应 `MOOD`；验收脚本退出码 0。**当前板上运行 `app1`**，出厂 `app0` 完好可切回。 [到货与实机记录](../test-worksheets/01-硬件到货清单.md#p0-a-双向联调验收2026-11-13-21582205measured) |
 | 阶段 | P0-A 是当前主线。板上共享感知内核、USB 状态闭环、外接 IMU 和 Wi-Fi 会话均待验证。固定角布局、后握薄套和电池位置是设计候选。P0-B 保留后置。 [实施路线](../ROADMAP.md) |
 
 接手时可用 `git status --short --branch`、`git rev-parse --short HEAD` 和 `git rev-list --left-right --count origin/main...HEAD` 复核。最后一条按「落后、领先」输出，对比的是本地记录的远端引用。
@@ -53,7 +53,7 @@
 | **CP1 · 桌面等价** | **核心判据已达成（`8f11476`），剩一项收尾。** 已落地 `esp` 等价物：两 crate 的 `std` / `no_std+alloc` 双 feature；改造点为定长集合去重、`core::fmt`、`core::error::Error`、Schema 段 `#[cfg(feature="std")]`、依赖 feature 拆分。**剩余**：重复/过期场景的 no_std 侧对拍，以及把对拍脚本化并入门禁。 | std 与 no_std+alloc 两种库配置下，同一 9 帧回放输出**逐字节相同**（sha256 一致）；`build --no-default-features` 双 crate 通过；`verify.ps1 -SkipAudit` PASS，9 帧 golden 回归与 v0.3 fixtures 未变。 [回归测试](../../crates/ailive-gun-spirit-host/tests/golden_frames.rs) · [Cargo feature 规则](https://doc.rust-lang.org/cargo/reference/features.html#feature-unification) |
 | **CP1b · ESP32-S3 目标** | 待 CP1 形成可复现结果。验证目标编译和最小 C ABI 或独立 ESP-IDF 集成，接现有驱动前保留可运行的图库镜像。 | 记录工具链、依赖、链接结果与镜像大小。上板对照同一回放输入，记录内部堆与 PSRAM，并复测显示和触摸。 [固件与分区约束](../HARDWARE_IMPLEMENTATION_PLAN.md#013-p0-a-固件与分区约束2026-11-13-评审补记) |
 | **CP2 · 最小联机语义** | 待实施，台架先走 USB。定义快照、事件、表情回传和设备启动会话映射。帧头和启动标识的具体格式待验证，首轮可静态配置能力集，正式 `NodeHello` 与 `AssetRef` 见 `GS-CONTRACT-004`。 | 主机测试覆盖首连、重连、新启动、同 `revision` 重发、过期回复、截断和坏帧。初连/重连先建快照基线；接入 `AngularRateSample` 时按类型分派，保持独立账本。 [ADR-067](../DECISIONS.md#adr-067节点模型泛化落地单板形态强制契约-v03角速率改走独立指向流) · [ADR-069](../DECISIONS.md#adr-069p0-a-由-esp32-s3-运行感知内核) |
-| **CP3 · 现有图库与首颗 IMU** | 图库串口顺序通过、现场待验。用原型镜像和同板备份按说明启动 `app1`，依次点 `Next`、`Next`、`Prev`。之后以 USB 供电核对 P3/P4 和 IMU 模块。 | 图库三次画面与 `TOUCH`/`MOOD` 回执一致。IMU 核对地址/芯片 ID、轴向、抬放与静止、停止采样后转 `unknown`。前后握未接保持 `unknown`，完整握持流程用模拟输入覆盖。 [图库验收](../../firmware/jc3248w535/README.md#实机验收) · [感知试验表](../test-worksheets/P0-A-晶彩板屏台架与装配.md#2-usb-供电下的感知) |
+| **CP3 · 现有图库与首颗 IMU** | **图库与双向联调已通过（2026-11-13 晚）。剩首颗 IMU。** 已验：只读校验与备份一致、`app1` 写入回读一致并选中、PC→板 `STATE`/`STEP` 全通、板→PC 触屏回传 `TOUCH`/`MOOD`。**下一步**：USB 供电下核对 P3/P4 针序与 IMU 模块（地址/芯片 ID/轴向/抬放/静止/停采转 `unknown`）。 | 图库三次画面与 `TOUCH`/`MOOD` 回执一致，脚本退出码 0。IMU 部分待做：前后握未接保持 `unknown`，完整握持流程用模拟输入覆盖。 [图库验收](../../firmware/jc3248w535/README.md#实机验收) · [感知试验表](../test-worksheets/P0-A-晶彩板屏台架与装配.md#2-usb-供电下的感知) |
 | **CP4 · 固定角假体与供电** | 方案候选，现场待验。先用带壳屏纸样和等尺寸/质量电池假体试装，比较屏幕后与固定侧腔。可单独跑独立 5 V 功耗测量。 | 量出实际包络、活动件净空及后握盖线槽路径，记录握持和插拔空间、平均功耗与峰值。电池另走 P5/成品 5 V 路线的实测门。 [装配及供电试验表](../test-worksheets/P0-A-晶彩板屏台架与装配.md) |
 | **CP5 · USB → Wi-Fi 闭环** | 待板端回放与消息语义可用。先让 Windows 测试程序收状态并回表情 ID，再改用独立供电和局域网。 | 断开 PC 后板端保留本地反馈。重连先取最新快照，新事件可用，重复消息及旧回复不会触发表达。记录链路延迟和恢复时间。 [实施路线](../ROADMAP.md) |
 
@@ -61,7 +61,8 @@
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- |
-| 2026-11-13 21:1x | DeepSeek | **CP1 核心判据达成**：`contracts`/`perception-core` 加 `std`/`no_std+alloc` 双 feature；改 5 个点（定长集合去重、`core::fmt`、`core::error::Error`、Schema 段 `#[cfg(std)]`、依赖 feature 拆分），host 向下游 `default-features=false` 再自开 `std`。 | `8f11476`。`cargo build --no-default-features` 双 crate 通过；模拟器同一输入两种配置输出 **9 行逐字节相同**；`verify.ps1 -SkipAudit` PASS。**未覆盖**：重复/过期场景仍只有 std 单测，待做 CLI 场景 + 脚本化对拍并入门禁。 |
+| 2026-11-13 22:05 | DeepSeek | **CP3 图库与双向联调验收通过**：手动进下载模式（左 `BOOT` + 右 `RESET`）→ 只读校验 → 重写 `app1` → 选中原型 → 跑 `test-usb.ps1 -CheckGallery`，现场点 `Next,Next,Prev`。同时确认了按钮布局（**右 RESET、左 BOOT**）与 `esptool 5.6.0` 烧录链路（压缩后 629,914 B、10.5 s、回读 digest 一致）。 | 只读校验与 16 MiB 备份逐项一致；`TOUCH 1..3` + `MOOD happy/excited/happy`；退出码 0。板上现运行 `app1`，`app0` 可切回。整片恢复写回仍未验证。 [验收记录](../test-worksheets/01-硬件到货清单.md#p0-a-双向联调验收2026-11-13-21582205measured) |
+| 2026-11-13 21:15 | DeepSeek | **CP1 核心判据达成**：`contracts`/`perception-core` 加 `std`/`no_std+alloc` 双 feature；改 5 个点（定长集合去重、`core::fmt`、`core::error::Error`、Schema 段 `#[cfg(std)]`、依赖 feature 拆分），host 向下游 `default-features=false` 再自开 `std`。 | `8f11476`。`cargo build --no-default-features` 双 crate 通过；模拟器同一输入两种配置输出 **9 行逐字节相同**；`verify.ps1 -SkipAudit` PASS。**未覆盖**：重复/过期场景仍只有 std 单测，待做 CLI 场景 + 脚本化对拍并入门禁。 |
 | 2026-11-13 20:41 | GPT | 复跑门禁，核对 Git、分区备份和现有源码。补全 CP1/CP1b、现场并行项与交回模板，并校正现行基线的旧口径。 | 受检 `8b71e0d`。42 项测试通过，审计仍为 1 项。 [门禁证据](../TECHNICAL_DEBT.md#1-审查基线) |
 | 2026-11-13 20:30 | DeepSeek | 建立本文件，与远端 `main` 合并，修补 4 项传递依赖漏洞，登记 `GS-DEP-001` 和四项硬件/固件约束。 | 合并 `44a9849`，对接稿 `8b71e0d`。 [技术债](../TECHNICAL_DEBT.md#2-当前台账) · [评审补记](../HARDWARE_IMPLEMENTATION_PLAN.md#013-p0-a-固件与分区约束2026-11-13-评审补记) |
 | 2026-11-13 晚间 | GPT | 整理固定侧 IMU、后握薄套与单路供电候选，纠正 P5 图纸针号，建立试验表。 | 设计候选，实物数据待填。 [P0-A 试验表](../test-worksheets/P0-A-晶彩板屏台架与装配.md) |
