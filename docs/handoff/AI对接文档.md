@@ -60,7 +60,10 @@
 ## 6. 进度日志（新→旧）
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
+| --- | --- | --- | --- || 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- |
+| 2026-11-14 01:3x | DeepSeek | **理论验证冲刺（V1–V5）+ 基线铸定 + 最小采购单**。V1：装 espup，真 `xtensa-esp32s3-none-elf` 编译（需 `-Zbuild-std=core,alloc`），新增 `firmware/kernel-shim`（panic_handler + newlib 分配器 + C ABI）并用 xtensa-gcc 完成 C↔Rust 链接。V2：五模块恶劣条件 6 项。V3：时间对齐 4 项。V4：新增 `ailive-gun-spirit-protocol` crate（10 项）。V5：纽扣续航模型。基线：`.cargo/audit.toml` 带到期日例外 + 修 quinn-udp，完整门禁 PASS，tag `baseline/GS-P0-BL-2026-11-14`。采购：第零批改为最小验证套件。 | 内核真目标 **155.6 KB**（未 LTO 上界，预算 338 KB）；V2/V3/V4 全绿；审计 0 漏洞 3 allowed 警告；最小套件 **约 100–180 元**，五项验证全过才买整机。 [验证计划](../P0A_VALIDATION_PLAN.md) |
+
 | 2026-11-13 23:4x | DeepSeek | **形态重大修订（所有者新约束）**：无走线 / 内部空间极少 / 组件做配件 / 通用模块化按需组装 / 有线作为经济方案 / 免充电优先 / IMU 必需 / 主机供电改充放电 / 需操作界面。新增 `MODULAR_SENSOR_NETWORK.md`：按物理邻近分成 主机(含 IMU)+M-A 握把组(后握+扳机)+M-B 前部组(前握)+M-C 枪托组(肩托)，首发覆盖全枪；**扳机并入 M-A 走 GPIO 中断、不经无线**；唤醒=GPIO 事件+常连；延迟/电流档位表；同一 PCB 双电池仓；标准连接通道（广播→配对→NodeHello→NVS→白名单重连）；操作界面 MVP 五页；主机供电 P1 成品 / P2 开源小板；模块固件建议 embassy Rust 复用 no_std 契约。 | `dc98b8d`。**影响**：GPIO 预算作废；`NodeHello` 升为 P0 必需；采购清单需重写（约 200–420 元）；四项待决见该文 §9。 |
 | 2026-11-13 23:2x | 子代理（协议草案） | 新增 `PROTOCOL_V1_DRAFT.md`（1282 行）：7 字节帧头 `GS`+ver+type+flags+len+payload+CRC-16/CCITT-FALSE、`MAX_FRAME=4105`；消息 HELLO/STATE/EVENT/EXPR/ACK/NACK/PING/PONG，`AIM` 单列可选；会话基线、event_id 去重、revision 倒退拒绝、**按类型分派再校验**、`AIM` 不校验连续性；标识符 1..=128 字节与 `bt-<MAC3>-<计数>` 建议；分级错误处理。 | `e7d997c`。**待所有者裁决三项**：① S2 是否启用 `AIM`；② 载荷编码（手写定长二进制 / postcard / CBOR，JSON 是否仅台架）；③ `host_boot_id` 语义（设备自填 / PC 重写 / 契约新增 `producer_boot_id`）。 |
 | 2026-11-13 23:0x | 子代理（CP1 收尾） | 模拟器加 `--scenario default/repeat/stale` 与 `duplicate/tick/stale` 内部命令；新增 `tests/simulator_scenarios.rs`（4 个回归）；新增 `scripts/check-nostd-parity.ps1` 并挂入 `verify.ps1`。 | `1145585`。3 场景 × 2 配置 sha256 全一致（default 9 帧 / repeat 11 帧 / stale 6 帧）；`verify.ps1 -SkipAudit` PASS。**已知局限**：stale 场景按当前 TTL=1000 ms 写死 +1001 ms，改 TTL 时场景语义会变但对拍门仍有效。 |
@@ -123,4 +126,5 @@
 ```
 
 给 DeepSeek 的开场可以直接复制「请按 §1 对齐当前版本，先推进 §5 的 CP1 桌面对拍。完成后按 §11 回填实际改动、验证结果、证据和下一步。缺少本机源码或实物数据时，列出所需的最小文件或现场记录。」项目历史与早期讨论见 [11 月 13 日一次性交接稿](2026-11-13-p0a-deepseek.md)。
+
 
