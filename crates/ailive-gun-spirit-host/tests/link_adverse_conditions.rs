@@ -6,13 +6,16 @@
 //! 同时验证一条**链路约束**：内核按"严格递增序号"接收，因此**链路必须保序**。
 //! BLE 的连接层本身保序，所以无线方案成立；若将来换成无序传输，必须先在链路层排序。
 
+// 测试代码用 expect 表达"此处不可能失败"；产品代码仍受 workspace 约束。
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
 use ailive_gun_spirit_contracts::{
     BootId, Capability, Contact, ContractVersion, GripBinding, MotionClass, NodeUid, ObservationId,
     Permille, PrimaryControlId, SensorObservation, SensorObservationKind,
 };
 use ailive_gun_spirit_perception_core::{
     CapabilitySet, ConfidenceProfile, FreshnessProfile, OrientationCalibration, PerceptionProfile,
-    PerceptionReducer, ReductionDisposition, ReducerError,
+    PerceptionReducer, ReducerError, ReductionDisposition,
 };
 
 fn permille(value: u16) -> Permille {
@@ -62,7 +65,10 @@ impl Node {
 /// 五模块形态：每个节点只绑定自己的那一项能力（同一能力只能一个 owner）。
 fn five_node_reducer() -> PerceptionReducer {
     let nodes = [
-        ("node-front", vec![Capability::FrontGrip, Capability::Motion]),
+        (
+            "node-front",
+            vec![Capability::FrontGrip, Capability::Motion],
+        ),
         ("node-rear", vec![Capability::RearGrip]),
         ("node-trigger", vec![Capability::PrimaryControl]),
         ("node-imu", vec![Capability::Orientation]),
@@ -79,8 +85,8 @@ fn five_node_reducer() -> PerceptionReducer {
         FreshnessProfile::try_new(1_000, 1_000, 1_000, 1_000, 3_500, 200).expect("freshness");
     let orientation = OrientationCalibration::try_new([1_000, 0, 0], [0, 0, 1_000], permille(500))
         .expect("orientation");
-    let confidence =
-        ConfidenceProfile::try_new(permille(900), permille(700), permille(900)).expect("confidence");
+    let confidence = ConfidenceProfile::try_new(permille(900), permille(700), permille(900))
+        .expect("confidence");
     let profile = PerceptionProfile::try_new(entries, freshness, Some(orientation), confidence)
         .expect("profile");
     PerceptionReducer::new(
@@ -108,7 +114,9 @@ fn duplicates_never_advance_semantics_twice() {
     assert!(reducer.ingest(first, 0).is_ok());
 
     let rear_engaged = rear.observe(10, grip(GripBinding::Rear, Contact::Engaged, 650));
-    let advanced = reducer.ingest(rear_engaged.clone(), 10).expect("ingest rear");
+    let advanced = reducer
+        .ingest(rear_engaged.clone(), 10)
+        .expect("ingest rear");
     assert_eq!(
         advanced.disposition,
         ReductionDisposition::SemanticStateAdvanced,
@@ -212,7 +220,12 @@ fn five_modules_all_report_and_stay_healthy() {
                 severity_milli: permille(250),
             },
         ),
-        front.observe(25, SensorObservationKind::MotionClass { motion: MotionClass::Idle }),
+        front.observe(
+            25,
+            SensorObservationKind::MotionClass {
+                motion: MotionClass::Idle,
+            },
+        ),
     ];
     for (index, sample) in samples.into_iter().enumerate() {
         reducer
@@ -239,4 +252,3 @@ fn link_must_preserve_order() {
         ReductionDisposition::SnapshotRefreshed | ReductionDisposition::SemanticStateAdvanced
     ));
 }
-

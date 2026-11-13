@@ -25,7 +25,8 @@ try {
     $expectedMembers = @(
         'ailive-gun-spirit-contracts',
         'ailive-gun-spirit-host',
-        'ailive-gun-spirit-perception-core'
+        'ailive-gun-spirit-perception-core',
+        'ailive-gun-spirit-protocol'
     ) | Sort-Object
 
     if (Compare-Object $expectedMembers $actualMembers) {
@@ -35,6 +36,7 @@ try {
     $allowedDependencies = @{
         'ailive-gun-spirit-contracts' = @('schemars', 'serde', 'serde_json')
         'ailive-gun-spirit-perception-core' = @('ailive-gun-spirit-contracts')
+        'ailive-gun-spirit-protocol' = @()
         'ailive-gun-spirit-host' = @(
             'ailive-gun-spirit-contracts',
             'ailive-gun-spirit-perception-core',
@@ -65,8 +67,9 @@ try {
         }
     }
 
-    Write-Output 'workspace-boundaries: PASS (3 members; dependency allowlists match)'
+    Write-Output 'workspace-boundaries: PASS (4 members; dependency allowlists match)'
 }
 finally {
     Pop-Location
 }
+

@@ -1,0 +1,15 @@
+[package]
+name = "ailive-gun-spirit-protocol"
+description = "P0-A 帧协议 v1：分帧、CRC 校验与消息类型（USB 与 Wi-Fi 共用同一语义）"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[features]
+default = ["std"]
+std = []
+
+[lints]
+workspace = true

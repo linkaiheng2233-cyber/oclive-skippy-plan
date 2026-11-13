@@ -4,6 +4,7 @@ members = [
     "crates/ailive-gun-spirit-contracts",
     "crates/ailive-gun-spirit-perception-core",
     "crates/ailive-gun-spirit-host",
+    "crates/ailive-gun-spirit-protocol",
 ]
 exclude = ["vendor/oclive_monolith_builtin"]
 default-members = ["crates/ailive-gun-spirit-host"]
@@ -36,3 +37,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 oclive_kernel_host = { path = "../oclivenewnew/kernel/crates/oclive_kernel_host" }
 oclive_kernel_runtime = { path = "../oclivenewnew/kernel/crates/oclive_kernel_runtime" }
 oclive_kernel_types = { path = "../oclivenewnew/kernel/crates/oclive_kernel_types" }
+
