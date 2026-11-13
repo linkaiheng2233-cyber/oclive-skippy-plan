@@ -279,6 +279,7 @@ void read_commands() {
 
 void setup() {
     Serial.begin(115200);
+    report_memory("boot");
     touch_events = xQueueCreate(16, sizeof(TouchEvent));
     if (!touch_events) {
         report_ready();
@@ -297,6 +298,7 @@ void setup() {
         display_ready = bsp_display_backlight_on() == ESP_OK;
     }
     report_ready();
+    report_memory(display_ready ? "display_ready" : "display_failed");
 }
 
 void loop() {
