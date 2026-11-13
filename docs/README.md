@@ -59,6 +59,7 @@
 | `LOCAL_3B_INFERENCE.md` | 3B及以下模型、角色上下文、速度/质量与训练进入条件 |
 | `CONFIG_REFERENCE.md` | 生成器/Host配置参考，不定义产品范围 |
 | `P0A_SOFTWARE_DESIGN.md` | **P0-A 软件实现设计**：分层、任务与时钟、消息语义分阶段、降级与验收映射；状态 `CANDIDATE` |
+| `PROTOCOL_V1_DRAFT.md` | **S2 帧协议草案**（USB 与 Wi-Fi 同一语义）：帧格式/CRC、消息类型、会话与去重、按类型分派校验、标识符上限、错误处理；状态 `CANDIDATE` |
 
 ## 5. 硬件领域真源
 
