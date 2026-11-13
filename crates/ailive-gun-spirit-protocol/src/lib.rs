@@ -19,7 +19,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
+pub mod codec;
+pub mod event;
 pub mod payload;
+pub mod state;
 
 /// 线首两字节："GS"。
 pub const MAGIC: [u8; 2] = [0x47, 0x53];
