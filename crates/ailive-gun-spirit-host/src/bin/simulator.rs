@@ -19,6 +19,9 @@ const REAR_NODE_UID: &str = "mock-rear-node";
 const FACT_TTL_MS: u64 = 1_000;
 const NODE_OFFLINE_TTL_MS: u64 = 1_500;
 const STANDBY_DWELL_MS: u64 = 100;
+/// One observation cadence: used by the `tick` command to advance the Host clock
+/// without delivering anything new.
+const TICK_STEP_MS: u64 = 10;
 const DEFAULT_COMMANDS: &[&str] = &[
     "baseline",
     "held",
@@ -30,6 +33,58 @@ const DEFAULT_COMMANDS: &[&str] = &[
     "standby",
     "unknown",
 ];
+/// Duplicate-input coverage. A repeated value command re-observes the same
+/// semantic value with a fresh sequence (`SnapshotRefreshed`, same revision);
+/// a `duplicate` command re-delivers the exact same `SensorObservation`
+/// (`DuplicateIgnored`, same revision); a `tick` publishes the unchanged
+/// snapshot again (`SnapshotResent`). All three must stay `resend` frames.
+const REPEAT_COMMANDS: &[&str] = &[
+    "baseline",
+    "held",
+    "held",
+    "duplicate",
+    "tick",
+    "ready",
+    "duplicate",
+    "control-on",
+    "control-on",
+    "duplicate",
+    "control-off",
+];
+/// TTL coverage. `stale` jumps past the fact TTL while both nodes are still
+/// inside the node-offline TTL, so facts degrade to `Stale` and the carrier
+/// becomes `Unknown(Stale)` instead of guessing a release. The following
+/// `held` proves a fresh observation recovers, and `unknown` crosses the
+/// node-offline TTL to show `NodeOffline` taking precedence.
+const STALE_COMMANDS: &[&str] = &["baseline", "ready", "stale", "held", "duplicate", "unknown"];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scenario {
+    Default,
+    Repeat,
+    Stale,
+}
+
+impl Scenario {
+    fn commands(self) -> &'static [&'static str] {
+        match self {
+            Self::Default => DEFAULT_COMMANDS,
+            Self::Repeat => REPEAT_COMMANDS,
+            Self::Stale => STALE_COMMANDS,
+        }
+    }
+}
+
+fn scenario_from_name(name: &str) -> Result<Scenario, String> {
+    match name {
+        "default" => Ok(Scenario::Default),
+        "repeat" => Ok(Scenario::Repeat),
+        "stale" => Ok(Scenario::Stale),
+        other => Err(format!(
+            "unknown scenario {other:?}; expected default, repeat or stale"
+        )),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MockPhysicalState {
@@ -104,6 +159,9 @@ struct DesktopFixture {
     reducer: PerceptionReducer,
     replay: PerceptionReplay,
     event_sequence: u64,
+    /// Exact last consumed observation, used by the `duplicate` command to
+    /// replay the same `observation_id`/`sequence` at a later Host time.
+    last_observation: Option<SensorObservation>,
 }
 
 impl DesktopFixture {
@@ -120,6 +178,7 @@ impl DesktopFixture {
             reducer,
             replay: PerceptionReplay::new(),
             event_sequence: 0,
+            last_observation: None,
         })
     }
 
@@ -250,6 +309,34 @@ impl DesktopFixture {
                 self.consume_output(output, &mut semantic_advance, &mut event_kinds)?;
                 disposition_name(semantic_advance)
             }
+            "duplicate" => {
+                let observation = self.last_observation.clone().ok_or_else(|| {
+                    "duplicate requires at least one previously delivered observation".to_owned()
+                })?;
+                self.consume(observation, &mut semantic_advance, &mut event_kinds)?;
+                observation_count += 1;
+                disposition_name(semantic_advance)
+            }
+            "tick" => {
+                self.now_ms = self.now_ms.saturating_add(TICK_STEP_MS);
+                let output = self
+                    .reducer
+                    .tick(self.now_ms)
+                    .map_err(|error| format!("idle tick failed: {error:?}"))?;
+                self.consume_output(output, &mut semantic_advance, &mut event_kinds)?;
+                disposition_name(semantic_advance)
+            }
+            "stale" => {
+                // Cross every fact TTL by one millisecond while staying below
+                // the node-offline TTL: facts become `Stale`, nodes stay healthy.
+                self.now_ms = self.now_ms.saturating_add(FACT_TTL_MS + 1);
+                let output = self
+                    .reducer
+                    .tick(self.now_ms)
+                    .map_err(|error| format!("stale tick failed: {error:?}"))?;
+                self.consume_output(output, &mut semantic_advance, &mut event_kinds)?;
+                disposition_name(semantic_advance)
+            }
             unknown => return Err(format!("unknown command {unknown:?}")),
         };
 
@@ -305,8 +392,9 @@ impl DesktopFixture {
         for observation in observations {
             self.now_ms = self.now_ms.saturating_add(10);
             self.reducer
-                .ingest(observation, self.now_ms)
+                .ingest(observation.clone(), self.now_ms)
                 .map_err(|error| format!("baseline observation failed: {error:?}"))?;
+            self.last_observation = Some(observation);
         }
         if self.physical == MockPhysicalState::default() {
             self.now_ms = self.now_ms.saturating_add(STANDBY_DWELL_MS);
@@ -338,8 +426,9 @@ impl DesktopFixture {
         self.now_ms = self.now_ms.saturating_add(10);
         let output = self
             .reducer
-            .ingest(observation, self.now_ms)
+            .ingest(observation.clone(), self.now_ms)
             .map_err(|error| format!("observation reduction failed: {error:?}"))?;
+        self.last_observation = Some(observation);
         self.consume_output(output, semantic_advance, event_kinds)
     }
 
@@ -405,29 +494,101 @@ impl DesktopFixture {
 
 fn main() {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
-    if arguments
-        .iter()
-        .any(|argument| argument == "-h" || argument == "--help")
-    {
-        eprintln!(
-            "Usage: ailive-gun-spirit-sim [baseline held ready control-on control-off lower standby unknown reboot ...]\n\
-             With no commands, runs the standard hardware-free lifecycle. Output is JSON Lines."
-        );
-        return;
-    }
-
-    let commands: Vec<&str> = if arguments.is_empty() {
-        DEFAULT_COMMANDS.to_vec()
-    } else {
-        arguments.iter().map(String::as_str).collect()
-    };
-    if let Err(message) = run_commands(&commands) {
-        eprintln!("[AILIVE_GUN_SPIRIT_SIM_INVALID] {message}");
-        std::process::exit(2);
+    match parse_commands(&arguments) {
+        Ok(Some(commands)) => {
+            if let Err(message) = run_commands(&commands) {
+                eprintln!("[AILIVE_GUN_SPIRIT_SIM_INVALID] {message}");
+                std::process::exit(2);
+            }
+        }
+        Ok(None) => {}
+        Err(message) => {
+            eprintln!("[AILIVE_GUN_SPIRIT_SIM_INVALID] {message}");
+            std::process::exit(2);
+        }
     }
 }
 
-fn run_commands(commands: &[&str]) -> Result<(), String> {
+fn print_usage() {
+    eprintln!(
+        "Usage: ailive-gun-spirit-sim [--scenario default|repeat|stale] [--] [command ...]\n\
+         \n\
+         Scenarios:\n\
+         \x20 default  Standard 9-frame hardware-free lifecycle (default).\n\
+         \x20 repeat   Duplicate observation and same-revision resend coverage.\n\
+         \x20 stale    Fact TTL expiry, recovery and node-offline coverage.\n\
+         \n\
+         Commands: baseline held ready control-on control-off lower standby unknown reboot duplicate tick stale\n\
+         With no positional commands, the selected scenario preset runs. Output is JSON Lines."
+    );
+}
+
+/// Parses the optional scenario selector and the optional explicit command list.
+///
+/// Explicit positional commands replace the scenario preset; `--scenario` only
+/// chooses which preset runs when no command is given. `Ok(None)` means help was
+/// printed and the process should exit successfully.
+fn parse_commands(arguments: &[String]) -> Result<Option<Vec<String>>, String> {
+    let mut scenario = Scenario::Default;
+    let mut scenario_given = false;
+    let mut commands = Vec::new();
+    let mut positional_only = false;
+    let mut index = 0_usize;
+    while index < arguments.len() {
+        let argument = arguments[index].as_str();
+        if !positional_only {
+            match argument {
+                "-h" | "--help" => {
+                    print_usage();
+                    return Ok(None);
+                }
+                "--" => {
+                    positional_only = true;
+                    index += 1;
+                    continue;
+                }
+                "--scenario" => {
+                    let value = arguments
+                        .get(index + 1)
+                        .ok_or_else(|| "--scenario requires a value".to_owned())?;
+                    if scenario_given {
+                        return Err("--scenario may only be given once".to_owned());
+                    }
+                    scenario = scenario_from_name(value)?;
+                    scenario_given = true;
+                    index += 2;
+                    continue;
+                }
+                _ => {}
+            }
+            if let Some(value) = argument.strip_prefix("--scenario=") {
+                if scenario_given {
+                    return Err("--scenario may only be given once".to_owned());
+                }
+                scenario = scenario_from_name(value)?;
+                scenario_given = true;
+                index += 1;
+                continue;
+            }
+            if argument.starts_with("--") {
+                return Err(format!("unknown option {argument:?}"));
+            }
+        }
+        commands.push(argument.to_owned());
+        index += 1;
+    }
+
+    if commands.is_empty() {
+        commands = scenario
+            .commands()
+            .iter()
+            .map(|command| command.to_string())
+            .collect();
+    }
+    Ok(Some(commands))
+}
+
+fn run_commands(commands: &[String]) -> Result<(), String> {
     let mut fixture = DesktopFixture::new()?;
     for command in commands {
         let frame = fixture.run_command(command)?;

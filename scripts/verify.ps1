@@ -53,6 +53,11 @@ try {
         '--check'
     )
 
+    & (Join-Path $PSScriptRoot 'check-nostd-parity.ps1')
+    if ($LASTEXITCODE -ne 0) {
+        throw "no_std parity check failed with exit code $LASTEXITCODE"
+    }
+
     if (-not $SkipAudit) {
         Invoke-Checked 'cargo audit' cargo @('audit')
     }
