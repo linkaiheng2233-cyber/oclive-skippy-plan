@@ -2,6 +2,19 @@
 //!
 //! Hardware adapters own sampling and filtering. This crate consumes typed states and never knows
 //! OCLive, BLE, GPIO, databases, Linux services, roles, cooldowns, or response probability.
+//!
+//! 默认启用 `std`；`--no-default-features` 时在 `no_std` + `alloc` 下编译，供枪侧固件复用
+//! **同一份**融合实现（ADR-069 / CP1）。
+
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+// `vec!` 只在测试模块里用到；非测试的 no_std 构建下该导入会显示未使用。
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use alloc::{vec, vec::Vec};
 
 mod reducer;
 

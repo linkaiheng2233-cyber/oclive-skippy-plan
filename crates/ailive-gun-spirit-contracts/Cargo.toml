@@ -10,7 +10,13 @@ description = "Typed physical observation, perception state, and device event co
 [lints]
 workspace = true
 
+[features]
+default = ["std"]
+# 关闭 std 后本 crate 在 no_std + alloc 下编译，供枪侧固件复用同一份契约实现。
+# 由 Rust 类型生成的 Schema 属主机侧工具链，只在 std 下提供。
+std = ["serde/std", "schemars/std", "dep:serde_json"]
+
 [dependencies]
 schemars.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, optional = true }

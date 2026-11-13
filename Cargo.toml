@@ -26,8 +26,8 @@ unimplemented = "deny"
 unwrap_used = "warn"
 
 [workspace.dependencies]
-schemars = "1.2.2"
-serde = { version = "1", features = ["derive"] }
+schemars = { version = "1.2.2", default-features = false, features = ["derive"] }
+serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

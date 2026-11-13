@@ -1,5 +1,7 @@
 use ailive_gun_spirit_contracts::{Capability, NodeUid, Permille};
-use std::fmt;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+use core::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FreshnessProfile {
@@ -288,4 +290,4 @@ impl fmt::Display for ProfileError {
     }
 }
 
-impl std::error::Error for ProfileError {}
+impl core::error::Error for ProfileError {}

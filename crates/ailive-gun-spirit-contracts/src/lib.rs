@@ -2,11 +2,23 @@
 //!
 //! 本crate只包含纯值类型、语义校验和由同一Rust类型生成的JSON Schema。
 //! 它不得依赖OCLive、BLE、Linux设备、数据库或async runtime。
+//!
+//! 默认启用 `std`；`--no-default-features` 时在 `no_std` + `alloc` 下编译，
+//! 供枪侧固件复用**同一份**契约实现（ADR-069 / CP1）。由 Rust 类型生成的
+//! Schema 属主机侧工具链，只在 `std` 下提供。
 
-use schemars::{schema_for, JsonSchema};
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::String, vec::Vec};
+use core::fmt;
+#[cfg(feature = "std")]
+use schemars::schema_for;
+use schemars::JsonSchema;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
-use std::collections::HashSet;
-use std::fmt;
 
 pub const MAX_SOURCE_REFS: usize = 4;
 pub const MAX_NODE_HEALTH_ENTRIES: usize = 8;
@@ -89,7 +101,7 @@ impl fmt::Display for IdentifierError {
     }
 }
 
-impl std::error::Error for IdentifierError {}
+impl core::error::Error for IdentifierError {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, JsonSchema)]
 #[serde(transparent)]
@@ -140,7 +152,7 @@ impl fmt::Display for PermilleOutOfRange {
     }
 }
 
-impl std::error::Error for PermilleOutOfRange {}
+impl core::error::Error for PermilleOutOfRange {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -528,16 +540,20 @@ impl ContractValidate for PerceptionState {
                 format!("must contain at most {MAX_NODE_HEALTH_ENTRIES} entries"),
             ));
         }
-        let mut node_uids = HashSet::new();
+        // 上限 8 项，线性扫描足够；避免为去重引入 std-only 集合或额外依赖。
+        let mut node_uids: Vec<&str> = Vec::new();
         for (index, health) in self.node_health.iter().enumerate() {
             health
                 .node_uid
                 .validate_at(&format!("node_health[{index}].node_uid"), &mut errors);
-            if !node_uids.insert(health.node_uid.as_str()) {
+            let node_uid = health.node_uid.as_str();
+            if node_uids.contains(&node_uid) {
                 errors.push(ValidationError::new(
                     format!("node_health[{index}].node_uid"),
                     "duplicate node_uid",
                 ));
+            } else {
+                node_uids.push(node_uid);
             }
         }
         finish_validation(errors)
@@ -596,18 +612,21 @@ fn finish_validation(errors: Vec<ValidationError>) -> Result<(), Vec<ValidationE
     }
 }
 
+#[cfg(feature = "std")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedSchema {
     pub file_name: &'static str,
     pub json: String,
 }
 
+#[cfg(feature = "std")]
 #[derive(Debug)]
 pub enum SchemaGenerationError {
     Json(serde_json::Error),
     RootIsNotObject { file_name: &'static str },
 }
 
+#[cfg(feature = "std")]
 impl fmt::Display for SchemaGenerationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -622,8 +641,10 @@ impl fmt::Display for SchemaGenerationError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for SchemaGenerationError {}
 
+#[cfg(feature = "std")]
 impl From<serde_json::Error> for SchemaGenerationError {
     fn from(error: serde_json::Error) -> Self {
         Self::Json(error)
@@ -635,6 +656,7 @@ impl From<serde_json::Error> for SchemaGenerationError {
 /// 只产出**当前**版本：v0.2三份已冻结为历史件，不再重新生成。
 /// 重新生成它们会产生一份既自称v0.2、又描述v0.3类型的文件——
 /// 那已经不是"描述v0.2消息"的schema了。
+#[cfg(feature = "std")]
 pub fn generated_schema_documents() -> Result<Vec<GeneratedSchema>, SchemaGenerationError> {
     Ok(vec![
         render_schema::<SensorObservation>(
@@ -660,6 +682,7 @@ pub fn generated_schema_documents() -> Result<Vec<GeneratedSchema>, SchemaGenera
     ])
 }
 
+#[cfg(feature = "std")]
 fn render_schema<T: JsonSchema>(
     file_name: &'static str,
     schema_id: &str,

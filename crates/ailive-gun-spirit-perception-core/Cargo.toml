@@ -10,5 +10,10 @@ description = "Deterministic physical fact fusion and edge derivation"
 [lints]
 workspace = true
 
+[features]
+default = ["std"]
+# 关闭 std 后本 crate 在 no_std + alloc 下编译，供枪侧固件复用同一份融合实现（CP1）。
+std = ["ailive-gun-spirit-contracts/std"]
+
 [dependencies]
-ailive-gun-spirit-contracts = { path = "../ailive-gun-spirit-contracts" }
+ailive-gun-spirit-contracts = { path = "../ailive-gun-spirit-contracts", default-features = false }

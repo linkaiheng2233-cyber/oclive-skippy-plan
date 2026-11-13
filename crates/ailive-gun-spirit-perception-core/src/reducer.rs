@@ -4,6 +4,8 @@ use ailive_gun_spirit_contracts::{
     Permille, Pose, SensorObservation, SensorObservationKind, SourceRef, UnknownReason,
     ValidationError,
 };
+#[cfg(not(feature = "std"))]
+use alloc::{vec, vec::Vec};
 
 mod profile;
 
