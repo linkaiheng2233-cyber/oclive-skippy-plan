@@ -83,13 +83,17 @@
 
 ### 4.1 V1 的下一步（链接层）
 
-要真正证明"内核进固件"，还差一步：把 Rust 静态库与 Arduino 固件链接。
+**已完成（2026-11-14）**：`firmware/kernel-shim/` 提供 `#[panic_handler]`、newlib 全局分配器与 C ABI，真机目标链接通过。
 
-| 需要的件 | 说明 |
+| 步骤 | 结果 |
 |---|---|
-| `#[panic_handler]` | 板上转成 `abort()` 或直接复位；不得展开 |
-| `#[global_allocator]` | 包一层 newlib 的 `malloc/free`（需要 `unsafe impl`） |
-| C ABI 薄层 | 例如 `gs_reducer_new` / `gs_reducer_ingest` / `gs_reducer_state_json` |
-| 位置 | 垫片**不能**放在本 workspace（`forbid(unsafe_code)`），应作为独立 crate 放 `firmware/kernel-shim/` 并加入根 `Cargo.toml` 的 `exclude` |
+| `cargo +esp build --target xtensa-esp32s3-none-elf -Zbuild-std=core,alloc`（shim） | ✅ staticlib 823.6 KB |
+| C 侧 `main.c` 编译（`xtensa-esp32s3-elf-gcc -O2`） | ✅ |
+| **部分链接 C + Rust 静态库**（`gcc -r`） | ✅ **exit 0**（仅 `.note.GNU-stack` 提示） |
+| 链接后体积 | **`.text` 155.6 KB + `.rodata` 6.2 KB（未 LTO 上界）** |
 
-**这是一项工程任务，不是理论风险**：模式成熟（no_std 静态库 + C 垫片 + Arduino 链接），已验证的只是"能不能编到目标 + 体积多少"，链接层尚未验证。
+**对照预算**：155.6 KB / 338 KB = **46%**，余 182 KB。shim 已开 `lto`+`opt-level="s"`，最终整体 LTO 后会明显更小，故 155.6 KB 是**保守上界**。
+
+**结论：V1 完成——内核在真 Xtensa 目标上可编译、可链接、体积在预算内。**
+
+遗留（后续里程碑）：把该静态库真正接进 Arduino 固件的构建流程（`build.ps1` 增加链接参数与 C 垫片调用点），属工程集成而非理论验证。

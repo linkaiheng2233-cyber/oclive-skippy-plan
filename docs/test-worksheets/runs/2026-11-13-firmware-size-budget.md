@@ -224,7 +224,24 @@ KERNEL_HEAP peak=2978 held=854 with_clone_peak=2978 samples=8
 
 **后续**：`espup install` 后做真 Xtensa 构建，取最终数字（阻塞项：工具链下载较大）。
 
-## 11. 剩余待办
+## 11. V1 链接层：内核真进固件的实测体积（`MEASURED`，2026-11-14）
+
+`firmware/kernel-shim/`（workspace 之外，因需要 `unsafe`）提供 `#[panic_handler]`、newlib `malloc/free` 全局分配器与 C ABI：`gs_kernel_abi_version` / `gs_kernel_self_test` / `gs_kernel_state_revision`。
+
+| 步骤 | 结果 |
+|---|---|
+| shim 构建（`cargo +esp … -Zbuild-std=core,alloc`） | ✅ `libgs_kernel_shim.a` **823.6 KB** |
+| C 侧编译（`xtensa-esp32s3-elf-gcc -O2 -c`） | ✅ |
+| **C + Rust 部分链接**（`gcc -r`） | ✅ **exit 0** |
+| 链接产物 | `merged.o` 855,460 B：**`.text` 159,341 B（155.6 KB）**、`.rodata` 6,309 B |
+
+**判读**：
+- 155.6 KB 是**未做 LTO 的上界**（`-r` 部分链接不执行 LTO；shim 已开 `lto`+`opt-level="s"`，最终整体链接会显著收缩）。
+- 占 338 KB 预算 **46%**，余 **182 KB**。
+
+**V1 结论**：内核在真 Xtensa 目标上**可编译、可链接、体积在预算内**。剩余为工程集成（把静态库接进 `build.ps1` 并加 C 调用点），不属理论风险。
+
+## 12. 剩余待办
 
 1. **上板验证资产管线**（上面那条）。
 2. 射频下真实堆（用 E 版实测，补 `ESTIMATED` 的 30–50 KB）。

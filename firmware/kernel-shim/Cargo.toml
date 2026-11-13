@@ -1,0 +1,22 @@
+[package]
+name = "gs-kernel-shim"
+description = "把感知内核编成可链进 ESP32-S3 固件的静态库：提供 panic_handler、newlib 全局分配器与 C ABI"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# 本 crate 必须放在 workspace 之外：
+# - 需要 `unsafe impl GlobalAlloc` 与 extern C 声明
+# - 工作区在 Cargo.toml 里 `forbid(unsafe_code)`，不可覆盖
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+ailive-gun-spirit-contracts = { path = "../../crates/ailive-gun-spirit-contracts", default-features = false }
+ailive-gun-spirit-perception-core = { path = "../../crates/ailive-gun-spirit-perception-core", default-features = false }
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
