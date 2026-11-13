@@ -17,6 +17,7 @@ workspace = true
 # 而 host 自身始终是 std 二进制——CP1 的双配置等价对拍依赖这一点。
 ailive-gun-spirit-contracts = { path = "../ailive-gun-spirit-contracts", default-features = false }
 ailive-gun-spirit-perception-core = { path = "../ailive-gun-spirit-perception-core", default-features = false }
+ailive-gun-spirit-protocol = { path = "../ailive-gun-spirit-protocol", default-features = false }
 oclive_kernel_host.workspace = true
 oclive_kernel_runtime.workspace = true
 oclive_kernel_types.workspace = true
@@ -32,6 +33,7 @@ default = ["std"]
 std = [
     "ailive-gun-spirit-contracts/std",
     "ailive-gun-spirit-perception-core/std",
+    "ailive-gun-spirit-protocol/std",
 ]
 monolith = ["dep:oclive_monolith_builtin"]
 
@@ -47,3 +49,9 @@ required-features = ["monolith"]
 [[bin]]
 name = "ailive-gun-spirit-sim"
 path = "src/bin/simulator.rs"
+
+[[bin]]
+name = "ailive-gun-spirit-bench"
+path = "src/bin/bench_host.rs"
+
+

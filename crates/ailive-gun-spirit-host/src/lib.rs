@@ -3,6 +3,7 @@
 //! This crate is the composition boundary. It may know both the neutral gun-spirit contracts and
 //! OCLive adapters, while neither kernel is allowed to depend on the other.
 
+pub mod bench;
 mod oclive_adapter;
 
 pub use oclive_adapter::{

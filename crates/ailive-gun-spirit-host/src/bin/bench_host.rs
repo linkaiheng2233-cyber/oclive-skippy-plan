@@ -1,0 +1,279 @@
+//! PC 台架程序（M2）：验证板 ↔ 电脑的帧协议会话。
+//!
+//! 两种模式：
+//! - `--simulate`：不依赖硬件，用合成帧跑完整会话判据（握手、快照、事件去重、
+//!   revision 倒退、坏帧、重复投递）。**这是 M2 的验收手段**。
+//! - `--tcp <addr>`：连真实板子（M3 用），按帧解析并汇报统计。
+//!
+//! 退出码：0 = 全部判据通过；1 = 有判据失败或连接出错。
+
+// 台架工具：夹具编码失败说明测试自身写错，用 expect 直接暴露最清晰。
+#![allow(clippy::expect_used)]
+
+use std::env;
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::process::ExitCode;
+
+use ailive_gun_spirit_host::bench::{Rejection, Session};
+use ailive_gun_spirit_protocol::event::WireEvent;
+use ailive_gun_spirit_protocol::payload::{Expression, Hello};
+use ailive_gun_spirit_protocol::state::{WireFact, WireNodeHealth, WireState};
+use ailive_gun_spirit_protocol::{decode, encode, MessageType};
+
+const CONTRACT_MAJOR: u16 = 0;
+const CONTRACT_MINOR: u16 = 3;
+const BOARD_BOOT: &str = "board-boot-1";
+
+fn frame(message_type: MessageType, payload_bytes: &[u8]) -> Vec<u8> {
+    let mut buffer = vec![0u8; ailive_gun_spirit_protocol::MAX_FRAME];
+    let written = encode(&mut buffer, message_type, 0, payload_bytes).expect("encode frame");
+    buffer.truncate(written);
+    buffer
+}
+
+fn hello_frame() -> Vec<u8> {
+    let hello = Hello {
+        contract_major: CONTRACT_MAJOR,
+        contract_minor: CONTRACT_MINOR,
+        boot_id: BOARD_BOOT,
+        capabilities: 0b1_1111,
+    };
+    let mut payload_bytes = [0u8; 160];
+    let written = hello.encode(&mut payload_bytes).expect("encode hello");
+    frame(MessageType::Hello, &payload_bytes[..written])
+}
+
+fn state_frame(revision: u64) -> Vec<u8> {
+    let known = |value: u8| WireFact::Known {
+        value_code: value,
+        observed_at_ms: revision * 10,
+        fresh_until_ms: revision * 10 + 1_000,
+        confidence_milli: 900,
+    };
+    let state = WireState {
+        contract_major: CONTRACT_MAJOR,
+        contract_minor: CONTRACT_MINOR,
+        host_boot_id: String::from(BOARD_BOOT),
+        revision,
+        produced_at_ms: revision * 10,
+        carrier_state: known(1),
+        front_grip: known(0),
+        rear_grip: known(0),
+        motion: WireFact::Unknown {
+            reason_code: 2,
+            since_revision: revision,
+        },
+        pose: known(0),
+        primary_control: known(1),
+        node_health: vec![WireNodeHealth {
+            node_uid: String::from("node-front"),
+            state_code: 0,
+        }],
+    };
+    let mut payload_bytes = [0u8; 512];
+    let written = state.encode(&mut payload_bytes).expect("encode state");
+    frame(MessageType::State, &payload_bytes[..written])
+}
+
+fn event_frame(event_id: &str) -> Vec<u8> {
+    let event = WireEvent {
+        contract_major: CONTRACT_MAJOR,
+        contract_minor: CONTRACT_MINOR,
+        event_id: String::from(event_id),
+        host_boot_id: String::from(BOARD_BOOT),
+        occurred_at_ms: 100,
+        caused_by_revision: 1,
+        kind_code: 0,
+    };
+    let mut payload_bytes = [0u8; 320];
+    let written = event.encode(&mut payload_bytes).expect("encode event");
+    frame(MessageType::Event, &payload_bytes[..written])
+}
+
+/// 把一帧的某一字节翻掉，模拟链路腐蚀（CRC 会抓到）。
+fn corrupt(mut bytes: Vec<u8>) -> Vec<u8> {
+    let index = bytes.len() / 2;
+    bytes[index] ^= 0xFF;
+    bytes
+}
+
+/// 根据头部声明计算整帧长度；magic 或长度非法时返回 `None`（调用方滑动一字节）。
+fn header_frame_len(buffer: &[u8]) -> Option<usize> {
+    use ailive_gun_spirit_protocol::{HEADER_LEN, MAGIC, MAX_PAYLOAD};
+    if buffer.len() < HEADER_LEN || buffer[0..2] != MAGIC {
+        return None;
+    }
+    let length = usize::from(u16::from_le_bytes([buffer[5], buffer[6]]));
+    if length > MAX_PAYLOAD {
+        return None;
+    }
+    Some(HEADER_LEN + length + 2)
+}
+/// 喂一段字节流给会话，按帧增量解析。
+fn feed(session: &mut Session, buffer: &[u8]) -> usize {
+    let mut offset = 0;
+    let mut handled = 0;
+    while offset < buffer.len() {
+        match decode(&buffer[offset..]) {
+            Ok((frame_view, consumed)) => {
+                offset += consumed;
+                handled += 1;
+                let outcome = match frame_view.message_type {
+                    MessageType::Hello => Hello::decode(frame_view.payload)
+                        .map_err(Rejection::from)
+                        .and_then(|hello| session.on_hello(&hello)),
+                    MessageType::State => WireState::decode(frame_view.payload)
+                        .map_err(Rejection::from)
+                        .and_then(|state| session.on_state(state)),
+                    MessageType::Event => WireEvent::decode(frame_view.payload)
+                        .map_err(Rejection::from)
+                        .and_then(|event| session.on_event(&event).map(|_| ())),
+                    _ => Ok(()),
+                };
+                if let Err(reason) = outcome {
+                    println!("  reject: {reason}");
+                }
+            }
+            Err(error) => {
+                use ailive_gun_spirit_protocol::FrameError;
+                match error {
+                    // 坏 magic：逐字节滑动重同步，不计入坏帧统计。
+                    FrameError::BadMagic => offset += 1,
+                    // 数据不足：等更多字节。
+                    FrameError::NeedMoreData => break,
+                    // 其余错误：按头部声明的长度跳过整帧，避免把同一坏帧反复计数。
+                    other => {
+                        session.note_malformed();
+                        println!("  frame-error: {other}");
+                        let skip = header_frame_len(&buffer[offset..]).unwrap_or(1);
+                        offset += skip;
+                    }
+                }
+            }
+        }
+    }
+    handled
+}
+
+fn run_simulation() -> bool {
+    println!("bench: simulate");
+    let mut session = Session::new();
+
+    let mut stream = Vec::new();
+    stream.extend(hello_frame());
+    stream.extend(state_frame(1));
+    stream.extend(state_frame(2));
+    stream.extend(event_frame("evt-1"));
+    stream.extend(event_frame("evt-1")); // 链路重传：必须被去重
+    stream.extend(event_frame("evt-2"));
+    stream.extend(state_frame(1)); // revision 倒退：必须被拒
+    stream.extend(corrupt(event_frame("evt-3"))); // 坏 CRC：丢弃且不崩
+
+    let handled = feed(&mut session, &stream);
+    let stats = session.stats().clone();
+    println!(
+        "  frames={handled} hello={} states={} states_rejected={} events_new={} events_dup={} malformed={}",
+        stats.hellos, stats.states, stats.states_rejected, stats.events_new, stats.events_duplicate,
+        stats.events_rejected
+    );
+
+    let mut ok = true;
+    ok &= stats.hellos == 1;
+    ok &= stats.states == 2;
+    ok &= stats.states_rejected == 1;
+    ok &= stats.events_new == 2;
+    ok &= stats.events_duplicate == 1;
+    ok &= stats.events_rejected == 1;
+    ok &= session.snapshot().map(|state| state.revision) == Some(2);
+
+    if ok {
+        println!("bench: PASS");
+    } else {
+        println!("bench: FAIL");
+    }
+    ok
+}
+
+fn run_tcp(address: &str, seconds: u64) -> bool {
+    println!("bench: tcp {address}");
+    let mut stream = match TcpStream::connect(address) {
+        Ok(stream) => stream,
+        Err(error) => {
+            println!("  connect failed: {error}");
+            return false;
+        }
+    };
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(500)));
+    let mut session = Session::new();
+    let hello = hello_frame();
+    if let Err(error) = stream.write_all(&hello) {
+        println!("  write hello failed: {error}");
+        return false;
+    }
+
+    let expression = Expression {
+        expression: "happy",
+    };
+    let mut expr_payload = [0u8; 64];
+    let written = expression.encode(&mut expr_payload).expect("encode expr");
+    let expr = frame(MessageType::Expression, &expr_payload[..written]);
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
+    let mut buffer = [0u8; 4096];
+    let mut pending: Vec<u8> = Vec::new();
+    while std::time::Instant::now() < deadline {
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(count) => {
+                pending.extend_from_slice(&buffer[..count]);
+                let handled = feed(&mut session, &pending);
+                if handled > 0 {
+                    pending.clear();
+                    // 握手成功后发一次表情，验证上行通道。
+                    let _ = stream.write_all(&expr);
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {}
+            Err(error) => {
+                println!("  read failed: {error}");
+                return false;
+            }
+        }
+    }
+    let stats = session.stats();
+    println!(
+        "  hello={} states={} events_new={} events_dup={}",
+        stats.hellos, stats.states, stats.events_new, stats.events_duplicate
+    );
+    stats.hellos >= 1 && stats.states >= 1
+}
+
+fn main() -> ExitCode {
+    let args: Vec<String> = env::args().skip(1).collect();
+    let ok = match args.first().map(String::as_str) {
+        Some("--simulate") | None => run_simulation(),
+        Some("--tcp") => {
+            let address = args
+                .get(1)
+                .cloned()
+                .unwrap_or_else(|| "127.0.0.1:47900".to_owned());
+            let seconds = args
+                .get(2)
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(10);
+            run_tcp(&address, seconds)
+        }
+        Some(other) => {
+            eprintln!("unknown mode: {other}");
+            eprintln!("usage: ailive-gun-spirit-bench [--simulate | --tcp <addr> [seconds]]");
+            return ExitCode::from(2);
+        }
+    };
+    if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}

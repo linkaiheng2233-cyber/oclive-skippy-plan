@@ -40,6 +40,7 @@ try {
         'ailive-gun-spirit-host' = @(
             'ailive-gun-spirit-contracts',
             'ailive-gun-spirit-perception-core',
+            'ailive-gun-spirit-protocol',
             'oclive_kernel_host',
             'oclive_kernel_runtime',
             'oclive_kernel_types',
@@ -72,4 +73,5 @@ try {
 finally {
     Pop-Location
 }
+
 
