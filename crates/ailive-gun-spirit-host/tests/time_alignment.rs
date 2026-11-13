@@ -101,7 +101,7 @@ fn offset_error_tracks_path_asymmetry() {
     );
     // 路径不对称 8 ms/单程 → 估计误差应≈8 ms，而不是 0。
     assert!(
-        skewed_error >= 4 && skewed_error <= 12,
+        (4..=12).contains(&skewed_error),
         "不对称路径下的残余误差应≈8 ms，实际 {} ms",
         skewed_error
     );

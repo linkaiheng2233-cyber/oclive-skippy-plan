@@ -1,0 +1,12 @@
+# GS-DEP-001：本仓唯一无法自行修复的审计红点。
+#
+# 链：host → （兄弟仓）oclive_kernel_host → oclive_sqlx → sqlx-sqlite 0.8.6 → libsqlite3-sys 0.30.1
+# 原因：该依赖来自兄弟仓 ../oclivenewnew，本仓 `cargo update -p` 无解（"Locking 0 packages"）。
+# 期限：2026-12-14 前复核；到期后必须重新裁决，不得静默续期。
+# 到期处理：上游升级 sqlx/libsqlite3-sys 后删除本条；否则由项目所有者决定继续豁免或冻结相关能力。
+# 见 docs/TECHNICAL_DEBT.md 的 GS-DEP-001。
+
+[advisories]
+ignore = [
+    "RUSTSEC-2026-0459",
+]
