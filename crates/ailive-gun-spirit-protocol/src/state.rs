@@ -280,6 +280,55 @@ mod tests {
     }
 
     #[test]
+    fn cpp_board_state_reference_vector() {
+        // 板端 M3 固件（gs_wire.cpp）在全 Unknown 时发出的 STATE：
+        // boot_id = "board-000000-1"（其实际值取自 MAC，长度一致）、revision = 1、produced = 0。
+        // 上板验证时可直接比对这串字节，确认 C++ 与 Rust 两套编码一致。
+        let state = WireState {
+            contract_major: 0,
+            contract_minor: 3,
+            host_boot_id: String::from("board-000000-1"),
+            revision: 1,
+            produced_at_ms: 0,
+            carrier_state: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            front_grip: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            rear_grip: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            motion: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            pose: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            primary_control: WireFact::Unknown {
+                reason_code: REASON_NEVER_OBSERVED,
+                since_revision: 1,
+            },
+            node_health: Vec::new(),
+        };
+        let mut buffer = [0u8; 256];
+        let written = state.encode(&mut buffer).expect("encode");
+        let hex: alloc::string::String = buffer[..written]
+            .iter()
+            .map(|byte| alloc::format!("{byte:02X}"))
+            .collect();
+        println!("BOARD_STATE_VECTOR len={written} hex={hex}");
+        // 1(格式) + 2 + 2 + 1+14(boot) + 8 + 8 + 6*(1+1+8) + 1(节点数)
+        assert_eq!(written, 1 + 2 + 2 + 15 + 8 + 8 + 60 + 1);
+        let decoded = WireState::decode(&buffer[..written]).expect("decode");
+        assert_eq!(decoded, state);
+    }
+    #[test]
     fn state_round_trip() {
         let state = sample();
         let mut buffer = [0u8; 512];

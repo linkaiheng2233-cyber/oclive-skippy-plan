@@ -229,13 +229,35 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 |---|---|---|
 | **M1** | ✅ 完成 | `ailive-gun-spirit-protocol` 的 `codec`/`state`/`event` 模块；协议测试 17 → **30 项** |
 | **M2** | ✅ 完成 | `bench.rs` 会话状态机（7 项单测）+ `ailive-gun-spirit-bench --simulate` **PASS**：`hello=1 states=2 states_rejected=1 events_new=2 events_dup=1 malformed=1` |
-| **M3** | ⏳ **代码完成，待上板验证** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。验证方式：`ailive-gun-spirit-bench --tcp <板地址>`，需一次下载模式按键 |
+| **M3** | ⏳ **代码完成；验证工具就绪，待一次物理按键** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。**验证通道**：`scripts/serial-bridge.ps1`（串口↔TCP，自测 PASS）+ `ailive-gun-spirit-bench --tcp` |
 | M4 | 待做 | 前置已就绪（shim 链接验证通过） |
 | M5 | 待做 | — |
 
 **M3 的诚实边界**：板端 STATE 目前**六个 fact 全为 Unknown**（`NeverObserved`），因为我方内核尚未上板；不伪造"看起来正常"的事实。M4 接入内核后由真实融合结果替换。
 
 **踩坑记录**：自建头文件命名为 `wire.h` 在 Windows 上会**大小写不敏感地挡住 Arduino 的 `Wire.h`**，导致 `'Wire' was not declared`。已改名 `gs_wire.h/.cpp`，并需清理构建目录中的旧文件（`build.ps1` 只复制不清理）。
+
+### 6.5.2 M3 上板验证步骤（工具已就绪，2026-11-14）
+
+**前提**：一次物理按键（左 BOOT + 右 RESET）进下载模式。
+
+1. 烧录新固件（含 `gs_wire.*`）。
+2. 串口发 `WIRE on`，板子打印 `WIRE on boot_id=board-XXXXXX-1`。
+3. 另开终端跑桥：`./scripts/serial-bridge.ps1 -Port COM3 -ListenPort 47900`
+4. 再跑台架：`ailive-gun-spirit-bench --tcp 127.0.0.1:47900 15`
+5. **通过判据**：`hello=1` 且 `states>=1`；板子每秒发一次 STATE。
+
+**跨语言对照向量**（Rust 侧权威值，用于比对 C++ 编码是否一致）：
+
+```
+length = 97
+hex = 01000003000E626F6172642D3030303030302D310100000000000000000000000000000000000100000000000000000001000000000000000000010000000000000000000100000000000000000001000000000000000000010000000000000000
+```
+
+构造条件：`boot_id="board-000000-1"`、`revision=1`、`produced_at=0`、六个 fact 全 `Unknown(NeverObserved)`、`node_health=[]`。
+板端实际 `boot_id` 由 MAC 派生（同为 14 字符），因此**长度必然为 97**，只有中间 14 字节会不同——长度不符即为编码错位。
+
+**注意**：`produced_at` 与 `revision` 会随时间变化，比对时应看**长度**与**字段偏移**，而不是整串相等。
 ## 6. 验收映射
 
 | 检查点 | 软件侧判据 |
@@ -252,5 +274,6 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 
 
