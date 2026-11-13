@@ -47,6 +47,7 @@
 | `handoff/README.md` | 人类总览、AI交接文档及跨会话入口 |
 | `ESP32_GUN_ASSISTANT.md` | **枪上轻量助手形态**（枪上只留一块 ESP32-S3 + 小屏、自由/预设双模式、上下行契约边界、预设触发范围、BOM 与重量）；随 ADR-063 的 PC 主机形态，状态 `CANDIDATE` |
 | `PC_SIMULATION_BACKENDS.md` | **主机侧娱乐后端**（屏幕打靶 / 投影靶场 / 计分玩法、瞄准通道选型、延迟归属、安全与文案红线）；随 ADR-066，状态 `CANDIDATE` |
+| `GUN_INTERACTION_MATRIX.md` | **枪械联动候选矩阵**：23 项可观测动作 → 判据 → 五层减法 → MVP 顺序（肩托/拉栓/换弹/弹药粗范围） |
 
 ## 4. 架构、契约与软件
 
