@@ -222,6 +222,20 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 | **M5** | Wi-Fi STA 自动发现 + 断线重连 | 固件 + 台架程序 | 拔插网络后状态不丢、不重放旧事件 |
 
 **M4 的前置已完成**：`firmware/kernel-shim` 已用 xtensa-gcc 完成 C↔Rust 链接（`.text` 155.6 KB 上界）。
+
+### 6.5.1 进度（2026-11-14）
+
+| # | 状态 | 证据 |
+|---|---|---|
+| **M1** | ✅ 完成 | `ailive-gun-spirit-protocol` 的 `codec`/`state`/`event` 模块；协议测试 17 → **30 项** |
+| **M2** | ✅ 完成 | `bench.rs` 会话状态机（7 项单测）+ `ailive-gun-spirit-bench --simulate` **PASS**：`hello=1 states=2 states_rejected=1 events_new=2 events_dup=1 malformed=1` |
+| **M3** | ⏳ **代码完成，待上板验证** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。验证方式：`ailive-gun-spirit-bench --tcp <板地址>`，需一次下载模式按键 |
+| M4 | 待做 | 前置已就绪（shim 链接验证通过） |
+| M5 | 待做 | — |
+
+**M3 的诚实边界**：板端 STATE 目前**六个 fact 全为 Unknown**（`NeverObserved`），因为我方内核尚未上板；不伪造"看起来正常"的事实。M4 接入内核后由真实融合结果替换。
+
+**踩坑记录**：自建头文件命名为 `wire.h` 在 Windows 上会**大小写不敏感地挡住 Arduino 的 `Wire.h`**，导致 `'Wire' was not declared`。已改名 `gs_wire.h/.cpp`，并需清理构建目录中的旧文件（`build.ps1` 只复制不清理）。
 ## 6. 验收映射
 
 | 检查点 | 软件侧判据 |
@@ -238,4 +252,5 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 

@@ -60,7 +60,7 @@ foreach ($name in $drivers.Keys) {
     Copy-Item -LiteralPath $source -Destination $sketch
 }
 
-foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'lv_conf.h', 'portrait_assets.h') {
+foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'gs_wire.cpp', 'gs_wire.h', 'lv_conf.h', 'portrait_assets.h') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Jc3248w535\$name") -Destination $sketch
 }
 $assetArguments = @($MumuRole, $sketch)
@@ -101,4 +101,6 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 Copy-Item -LiteralPath (Join-Path $ToolRoot 'sketch\mumu-assets.json') -Destination $output
+
+
 

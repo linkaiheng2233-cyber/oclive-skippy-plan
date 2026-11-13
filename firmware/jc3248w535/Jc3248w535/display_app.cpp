@@ -20,6 +20,7 @@
 
 #include "display.h"
 #include "imu.h"
+#include "gs_wire.h"
 #include "esp_bsp.h"
 #include "portrait_assets.h"
 
@@ -228,6 +229,16 @@ void handle_command(const char *command) {
         return;
     }
 
+    // 帧协议开关：开启后串口进入帧模式，ASCII 调试暂停；
+    // 帧模式下输入 "WIRE off" 可随时退回（见 read_commands 的转义检测）。
+    if (strcmp(command, "WIRE on") == 0) {
+        gunspirit::wire::begin();
+        return;
+    }
+    if (strcmp(command, "WIRE off") == 0) {
+        gunspirit::wire::end();
+        return;
+    }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
     // 到货后 5 分钟内确认"接线对不对、芯片真不真、数据有没有"。
     if (strncmp(command, "IMU", 3) == 0) {
@@ -402,6 +413,26 @@ void handle_command(const char *command) {
 }
 
 void read_commands() {
+    if (gunspirit::wire::active()) {
+        // 帧模式：字节交给协议解析器；同时保留 "WIRE off" 转义，
+        // 否则进入帧模式后将无法再用 ASCII 退出。
+        static char escape[9] = {0};
+        for (int budget = 256; budget > 0 && Serial.available() > 0; --budget) {
+            const int byte = Serial.read();
+            if (byte < 0) {
+                break;
+            }
+            memmove(escape, &escape[1], 8);
+            escape[8] = static_cast<char>(byte);
+            if (memcmp(escape, "WIRE off", 8) == 0) {
+                escape[0] = '\0';
+                gunspirit::wire::end();
+                return;
+            }
+            gunspirit::wire::feed(static_cast<uint8_t>(byte));
+        }
+        return;
+    }
     // Cap work per pass so incoming bytes cannot starve touch reporting.
     for (int budget = 128; budget > 0 && Serial.available() > 0; --budget) {
         const int byte = Serial.read();
@@ -433,6 +464,21 @@ void read_commands() {
 
 }  // namespace
 
+namespace gunspirit::wire {
+// 显示层实现：把表情 id 映射到立绘。找不到返回 false，由协议层回 NACK。
+bool apply_mood(const char *id) {
+    if (id == nullptr) {
+        return false;
+    }
+    for (size_t index = 0; index < portrait_count; ++index) {
+        if (strcmp(id, portraits[index].id) == 0) {
+            show_portrait(index);
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace gunspirit::wire
 void setup() {
     Serial.begin(115200);
     report_memory("boot");
@@ -465,11 +511,14 @@ void setup() {
 
 void loop() {
     read_commands();
+    gunspirit::wire::pump(millis());
     TouchEvent touch;
     if (touch_events && xQueueReceive(touch_events, &touch, 0) == pdTRUE && Serial) {
         Serial.printf("TOUCH %" PRIu32 "\nMOOD %s\n", touch.sequence, portraits[touch.portrait].id);
     }
     delay(5);
 }
+
+
 
 
