@@ -90,8 +90,32 @@
 
 **结论**：RAM **不是**瓶颈（PSRAM 富余、内部堆加射频后仍有约 140–190 KB），**flash 才是**（立绘占 946 KB 使射频装不进 2 MiB 槽）。因此"立绘搬入 ffat / TF 卡"这条决定成立，且**不需要**为了 RAM 去加第二块 MCU。
 
-## 6. 下一步
+## 6. 外部资产模式实测（`MEASURED`，2026-11-14 00:5x）
 
-1. **资产管线**：把 `ffat`（11.88 MiB）当**裸资产区**用（索引表 + 原始 RGB565），需要 `pack-assets.py` 打包 + `flash-prototype.py --assets` 写入。
-2. **无立绘射频变体**：用 `-DDIAG_WIFI -DDIAG_BLE` 且不编入立绘，实测射频运行期真实堆（当前因体积 128% 装不下，必须先去立绘才能测）。
-3. Rust 内核上板的体积/内存门（CP1b）。
+把像素从固件搬到 `ffat` 裸资产区后的复测（打包 `assets.bin = 946,584 B`，与 7×135,200 B 加索引一致）：
+
+| 构建 | 宏 | 体积 | 占 2 MiB 槽 | 余量 | 全局变量 |
+|---|---|---|---|---|---|
+| **D** 外部资产 | `-BlobAssets` | **592,773 B** | 28% | **1,462 KB** | 70,888 B (21%) |
+| **E** 外部资产 + Wi-Fi + BLE | `-BlobAssets -DDIAG_WIFI -DDIAG_BLE` | **1,750,909 B** | **83%** | **338 KB** | 114,396 B (34%) |
+
+**对比内嵌资产**：同样带射频，内嵌是 2,696,665 B（**128%，装不下**），外部资产是 1,750,909 B（**83%，装得下**）。
+**⇒ 资产外置解决了 946 KB 的槽位问题，射频 + 立绘 + 338 KB 内核空间可以共存。**
+
+## 7. 资产管线（已实现）
+
+| 组件 | 改动 |
+|---|---|
+| `pack-portraits.py` | 新增 `--blob`：外部模式下**不生成 C 像素数组**，改生成 `assets.bin`（`GSA1` 头 + 24 B/条索引 + 原始 RGB565），仍保留原内嵌路径 |
+| `build.ps1` | 新增 `-BlobAssets`：自动传 `--blob` 并加 `-DUSE_BLOB_ASSETS` |
+| `portrait_assets.h` | `USE_BLOB_ASSETS` 下 `portraits[]` 改为可写（启动时回填 PSRAM 指针） |
+| `display_app.cpp` | 启动时按 `esp_partition_find_first(DATA, FAT, "ffat")` 定位分区，校验 `GSA1`/版本/数量/尺寸后，逐张 `heap_caps_malloc(MALLOC_CAP_SPIRAM)` + `esp_partition_read` 读入，回填 `lv_img_dsc_t`；失败打印 `ERR ASSET_*` |
+| `flash-prototype.py` | 新增 `--assets`：写前确认 `0x410000` 首扇区仍全 `0xFF`，写入并回读校验 |
+
+**待验证**（需一次按键）：把 `assets.bin` + 外部资产固件烧上板，确认串口出现 `ASSETS external=7 w=260 h=260`，且屏幕正常显示七张。
+
+## 8. 剩余待办
+
+1. **上板验证资产管线**（上面那条）。
+2. 射频下真实堆（用 E 版实测，补 `ESTIMATED` 的 30–50 KB）。
+3. Rust 内核上板的体积/内存门（CP1b，预算 338 KB flash / ≈140–190 KB 内部堆）。

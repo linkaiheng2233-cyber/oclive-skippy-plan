@@ -21,6 +21,9 @@ OTA_DATA = 0xE000
 FACTORY_APP = 0x10000
 PROTOTYPE_APP = 0x210000
 APP_SIZE = 0x200000
+# ffat 分区：出厂为空，用作"裸资产区"（索引表 + 原始 RGB565）。
+FFAT_START = 0x410000
+FFAT_SIZE = 0xBE0000
 ERASED_SECTOR = b"\xff" * SECTOR
 
 
@@ -82,6 +85,8 @@ def main():
     parser.add_argument("--before", choices=("default-reset", "no-reset"), default="no-reset")
     operation = parser.add_mutually_exclusive_group(required=True)
     operation.add_argument("--image", type=Path, help="Application .bin from build.ps1")
+    operation.add_argument("--assets", type=Path,
+                           help="Raw asset blob to write into the ffat region (0x410000)")
     operation.add_argument("--check", action="store_true", help="Check the board and backup")
     operation.add_argument("--factory", action="store_true", help="Boot the factory app again")
     args = parser.parse_args()
@@ -99,6 +104,14 @@ def main():
         image = args.image.read_bytes()
         if image[0] != 0xE9 or struct.unpack_from("<H", image, 12)[0] != 9:
             raise ValueError("Expected an ESP32-S3 app image.")
+
+    assets = None
+    if args.assets is not None:
+        assets = args.assets.read_bytes()
+        if not 24 <= len(assets) <= FFAT_SIZE:
+            raise ValueError("Asset blob size out of range.")
+        if assets[0:4] != b"GSA1":
+            raise ValueError("Expected a GSA1 asset blob (build with -BlobAssets).")
 
     with esptool.detect_chip(port=args.port, connect_mode=args.before) as rom:
         if rom.CHIP_NAME != "ESP32-S3" or rom.secure_download_mode:
@@ -126,6 +139,15 @@ def main():
 
         if args.check:
             esptool.reset_chip(esp, "no-reset-stub")
+            return
+
+        if args.assets is not None:
+            if not matches(esp, FFAT_START, ERASED_SECTOR):
+                raise ValueError("ffat asset region is not erased; refusing to overwrite.")
+            esptool.write_flash(esp, [(FFAT_START, assets)], no_progress=True)
+            esptool.verify_flash(esp, [(FFAT_START, assets)])
+            print(f"Asset blob written to ffat region ({len(assets)} bytes).", flush=True)
+            restart(esp)
             return
 
         if args.factory:

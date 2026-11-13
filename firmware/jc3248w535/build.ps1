@@ -4,7 +4,9 @@ param(
     [string]$MumuRole,
     [string]$AssetPython,
     # 附加编译宏，例如 "-DDIAG_RADIO"。用于把 Wi-Fi/BLE 协议栈链进来测体积与内存。
-    [string]$ExtraDefines
+    [string]$ExtraDefines,
+    # 外部资产模式：像素不进固件，改为生成 assets.bin 供写入 ffat 资产区。
+    [switch]$BlobAssets
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,7 +63,11 @@ foreach ($name in $drivers.Keys) {
 foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'lv_conf.h', 'portrait_assets.h') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Jc3248w535\$name") -Destination $sketch
 }
-& $AssetPython -B (Join-Path $PSScriptRoot 'pack-portraits.py') $MumuRole $sketch
+$assetArguments = @($MumuRole, $sketch)
+if ($BlobAssets) {
+    $assetArguments += @('--blob', (Join-Path $output 'assets.bin'))
+}
+& $AssetPython -B (Join-Path $PSScriptRoot 'pack-portraits.py') @assetArguments
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
@@ -81,6 +87,9 @@ if (-not (Test-Path -LiteralPath $core -PathType Container) -or
 
 $board = 'esp32:esp32:esp32s3:FlashSize=16M,FlashMode=qio,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc,PartitionScheme=fatflash'
 $lvglFlags = '-MMD -c -DLV_CONF_INCLUDE_SIMPLE -I"' + $sketch + '"'
+if ($BlobAssets) {
+    $lvglFlags = $lvglFlags + ' -DUSE_BLOB_ASSETS'
+}
 if ($ExtraDefines) {
     $lvglFlags = $lvglFlags + ' ' + $ExtraDefines
 }

@@ -22,6 +22,95 @@
 #include "esp_bsp.h"
 #include "portrait_assets.h"
 
+#ifdef USE_BLOB_ASSETS
+#include <esp_heap_caps.h>
+#include <esp_partition.h>
+
+namespace {
+
+// 外部资产 blob：16 字节头 + N x 24 字节索引 + 原始 RGB565 数据。
+// 与 pack-portraits.py 的 generate_external() 严格对齐。
+constexpr uint32_t kAssetMagic = 0x31415347;  // "GSA1" 小端
+struct AssetIndex {
+    char name[16];
+    uint32_t offset;
+    uint32_t length;
+};
+
+bool load_assets_from_flash() {
+    const esp_partition_t *partition = esp_partition_find_first(
+        ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "ffat");
+    if (partition == nullptr) {
+        Serial.println("ERR ASSET_PARTITION");
+        return false;
+    }
+    uint8_t header[16] = {0};
+    if (esp_partition_read(partition, 0, header, sizeof(header)) != ESP_OK) {
+        Serial.println("ERR ASSET_HEADER");
+        return false;
+    }
+    uint32_t magic = 0;
+    uint16_t version = 0;
+    uint16_t count = 0;
+    uint16_t width = 0;
+    uint16_t height = 0;
+    memcpy(&magic, header + 0, 4);
+    memcpy(&version, header + 4, 2);
+    memcpy(&count, header + 6, 2);
+    memcpy(&width, header + 8, 2);
+    memcpy(&height, header + 10, 2);
+    if (magic != kAssetMagic || version != 1) {
+        Serial.println("ERR ASSET_MAGIC");
+        return false;
+    }
+    if (count != portrait_count) {
+        Serial.printf("ERR ASSET_COUNT have=%u want=%u\n", static_cast<unsigned>(count),
+                      static_cast<unsigned>(portrait_count));
+        return false;
+    }
+    // 描述符与像素都放静态/PSRAM，生命周期覆盖整个运行期。
+    static lv_img_dsc_t descriptors[16] = {};
+    for (size_t index = 0; index < portrait_count; ++index) {
+        AssetIndex entry{};
+        const uint32_t entry_offset = sizeof(header) + sizeof(AssetIndex) * index;
+        if (esp_partition_read(partition, entry_offset, &entry, sizeof(entry)) != ESP_OK) {
+            Serial.println("ERR ASSET_INDEX");
+            return false;
+        }
+        if (strncmp(entry.name, portraits[index].id, sizeof(entry.name)) != 0) {
+            Serial.printf("ERR ASSET_NAME idx=%u\n", static_cast<unsigned>(index));
+            return false;
+        }
+        if (entry.length != static_cast<uint32_t>(width) * height * 2) {
+            Serial.printf("ERR ASSET_LENGTH idx=%u len=%u\n", static_cast<unsigned>(index),
+                          static_cast<unsigned>(entry.length));
+            return false;
+        }
+        void *pixels = heap_caps_malloc(entry.length, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (pixels == nullptr) {
+            Serial.println("ERR ASSET_PSRAM");
+            return false;
+        }
+        if (esp_partition_read(partition, entry.offset, pixels, entry.length) != ESP_OK) {
+            Serial.println("ERR ASSET_READ");
+            return false;
+        }
+        descriptors[index].header.cf = LV_IMG_CF_TRUE_COLOR;
+        descriptors[index].header.w = width;
+        descriptors[index].header.h = height;
+        descriptors[index].data_size = entry.length;
+        descriptors[index].data = static_cast<const uint8_t *>(pixels);
+        portraits[index].image = &descriptors[index];
+    }
+    Serial.printf("ASSETS external=%u w=%u h=%u bytes=%u\n", static_cast<unsigned>(count),
+                  static_cast<unsigned>(width), static_cast<unsigned>(height),
+                  static_cast<unsigned>(width) * height * 2 * count);
+    return true;
+}
+
+}  // namespace
+#endif
+
 namespace {
 
 struct TouchEvent {
@@ -280,6 +369,12 @@ void read_commands() {
 void setup() {
     Serial.begin(115200);
     report_memory("boot");
+#ifdef USE_BLOB_ASSETS
+    if (!load_assets_from_flash()) {
+        Serial.println("ERR ASSETS_UNAVAILABLE");
+    }
+    report_memory("assets_loaded");
+#endif
     touch_events = xQueueCreate(16, sizeof(TouchEvent));
     if (!touch_events) {
         report_ready();
