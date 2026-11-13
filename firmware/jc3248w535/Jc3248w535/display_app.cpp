@@ -19,6 +19,7 @@
 #endif
 
 #include "display.h"
+#include "imu.h"
 #include "esp_bsp.h"
 #include "portrait_assets.h"
 
@@ -227,6 +228,63 @@ void handle_command(const char *command) {
         return;
     }
 
+    // 诊断命令不需要显示就绪：IMU（ICM-45686）。
+    // 到货后 5 分钟内确认"接线对不对、芯片真不真、数据有没有"。
+    if (strncmp(command, "IMU", 3) == 0) {
+        const char *arg = command + 3;
+        while (*arg == ' ') {
+            ++arg;
+        }
+        if (*arg == '\0') {
+            uint8_t chip = 0;
+            if (!gunspirit::imu_init(&chip)) {
+                Serial.println("IMU ERR NO_DEVICE (check P3: 1=GND 2=3V3 3=GPIO17 4=GPIO18)");
+                return;
+            }
+            const bool configured = gunspirit::imu_configure();
+            Serial.printf("IMU chip=0x%02X expected=0x%02X match=%d configured=%d\n",
+                          static_cast<unsigned>(chip), static_cast<unsigned>(0xE9),
+                          gunspirit::imu_is_expected_chip(chip) ? 1 : 0, configured ? 1 : 0);
+            const gunspirit::ImuReading reading = gunspirit::imu_read();
+            if (!reading.valid) {
+                Serial.println("IMU ERR READ");
+                return;
+            }
+            Serial.printf("IMU raw  accel=[%d,%d,%d] gyro=[%d,%d,%d]\n",
+                          reading.accel_raw[0], reading.accel_raw[1], reading.accel_raw[2],
+                          reading.gyro_raw[0], reading.gyro_raw[1], reading.gyro_raw[2]);
+            Serial.printf("IMU eng  accel_g=[%.3f,%.3f,%.3f] gyro_dps=[%.2f,%.2f,%.2f]\n",
+                          reading.accel_g[0], reading.accel_g[1], reading.accel_g[2],
+                          reading.gyro_dps[0], reading.gyro_dps[1], reading.gyro_dps[2]);
+            return;
+        }
+        if (strncmp(arg, "RD ", 3) == 0) {
+            uint8_t chip = 0;
+            gunspirit::imu_init(&chip);
+            uint8_t value = 0;
+            const unsigned reg = strtoul(arg + 3, nullptr, 16);
+            if (!gunspirit::imu_peek(static_cast<uint8_t>(reg), &value)) {
+                Serial.println("IMU ERR RD");
+                return;
+            }
+            Serial.printf("IMU RD 0x%02X = 0x%02X (%u)\n", reg & 0xFF,
+                          static_cast<unsigned>(value), static_cast<unsigned>(value));
+            return;
+        }
+        if (strncmp(arg, "WR ", 3) == 0) {
+            char *end = nullptr;
+            const unsigned reg = strtoul(arg + 3, &end, 16);
+            const unsigned value = (end != nullptr) ? strtoul(end, nullptr, 16) : 0;
+            uint8_t chip = 0;
+            gunspirit::imu_init(&chip);
+            const bool ok = gunspirit::imu_poke(static_cast<uint8_t>(reg), static_cast<uint8_t>(value));
+            Serial.printf("IMU WR 0x%02X <- 0x%02X %s\n", reg & 0xFF, value & 0xFF, ok ? "ok" : "fail");
+            return;
+        }
+        Serial.println("ERR IMU: (none) | RD <hexreg> | WR <hexreg> <hexval>");
+        return;
+    }
+
     // 诊断命令不需要显示就绪
     if (strcmp(command, "MEM") == 0) {
         report_memory("idle");
@@ -413,3 +471,5 @@ void loop() {
     }
     delay(5);
 }
+
+
