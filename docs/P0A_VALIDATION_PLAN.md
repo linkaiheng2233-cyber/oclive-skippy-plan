@@ -72,9 +72,24 @@
 
 | 假设 | 状态 |
 |---|---|
-| V1 | ⏳ 进行中（`cargo install espup` 已启动；代理目标已过：95 KB / 3 KB） |
-| V2–V4 | ⏳ 未开始 |
+| **V1** | ✅ **编译层通过**（真 `xtensa-esp32s3-none-elf`：contracts 82.0 KB + core 23.4 KB = **105.5 KB**，占 338 KB 预算 31%）；⏳ **链接层待做**（staticlib 需要 `#[panic_handler]` + `#[global_allocator]` 垫片，而工作区 `forbid(unsafe_code)`，垫片必须放 workspace 之外） |
+| **V2** | ✅ 通过（6 项：重复/倒退/碰撞/重启/五节点/链路保序约束） |
+| **V3** | ✅ 通过（4 项：同模块作差精确、对称抖动残余 3 ms、不对称 8 ms/单程得 7 ms、修正后误差 ≤1 ms、30 s 重同步漂移 ≤2 ms） |
+| **V4** | ✅ 通过（10 项：分帧/CRC/截断逐字节/坏 magic/版本类型/篡改/超长/流式） |
 | V5 | ⏳ 未开始（可用数据手册建模） |
-| V6–V10 | ⏳ 需要最小验证套件 |
+| V6–V10 | ⏳ 需要最小验证套件（约 80–155 元） |
 
 **已完成且不需重做**：桌面 ↔ no_std 语义等价（CP1）、资产外置与显示闭环（CP3 图库/双向）、板上内存实测。
+
+### 4.1 V1 的下一步（链接层）
+
+要真正证明"内核进固件"，还差一步：把 Rust 静态库与 Arduino 固件链接。
+
+| 需要的件 | 说明 |
+|---|---|
+| `#[panic_handler]` | 板上转成 `abort()` 或直接复位；不得展开 |
+| `#[global_allocator]` | 包一层 newlib 的 `malloc/free`（需要 `unsafe impl`） |
+| C ABI 薄层 | 例如 `gs_reducer_new` / `gs_reducer_ingest` / `gs_reducer_state_json` |
+| 位置 | 垫片**不能**放在本 workspace（`forbid(unsafe_code)`），应作为独立 crate 放 `firmware/kernel-shim/` 并加入根 `Cargo.toml` 的 `exclude` |
+
+**这是一项工程任务，不是理论风险**：模式成熟（no_std 静态库 + C 垫片 + Arduino 链接），已验证的只是"能不能编到目标 + 体积多少"，链接层尚未验证。
