@@ -57,6 +57,7 @@
 | `LINUX_ARM64.md` | Zero 3W目标Linux镜像、服务和板端bring-up |
 | `LOCAL_3B_INFERENCE.md` | 3B及以下模型、角色上下文、速度/质量与训练进入条件 |
 | `CONFIG_REFERENCE.md` | 生成器/Host配置参考，不定义产品范围 |
+| `P0A_SOFTWARE_DESIGN.md` | **P0-A 软件实现设计**：分层、任务与时钟、消息语义分阶段、降级与验收映射；状态 `CANDIDATE` |
 
 ## 5. 硬件领域真源
 

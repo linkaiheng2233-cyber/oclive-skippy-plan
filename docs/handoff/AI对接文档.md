@@ -61,6 +61,7 @@
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- |
+| 2026-11-13 22:40 | DeepSeek | **四份设计落地**：① 交互方案 v1（480×320 三层、7 表情词表单值、三条通路优先级、感知→表达映射、防抖）写入 `FRONTEND_DESIGN_BRIEF.md` §9；② 新建 `P0A_SOFTWARE_DESIGN.md`（分层/四个任务/时钟/消息 S1→S3 分阶段/降级/验收映射）；③ 采购 §0.5 改为「板屏已到位，只买传感器」并给出具体型号与合计 70–200 元；④ `MAIN_POWER.md` §P0-A 加三道门 G1/USB 单路 G2/U2 未定不买电池 G3/≥3 h。 | 均为设计候选，未动代码；传感器型号、针距与供电门仍需实物核对。 |
 | 2026-11-13 22:05 | DeepSeek | **CP3 图库与双向联调验收通过**：手动进下载模式（左 `BOOT` + 右 `RESET`）→ 只读校验 → 重写 `app1` → 选中原型 → 跑 `test-usb.ps1 -CheckGallery`，现场点 `Next,Next,Prev`。同时确认了按钮布局（**右 RESET、左 BOOT**）与 `esptool 5.6.0` 烧录链路（压缩后 629,914 B、10.5 s、回读 digest 一致）。 | 只读校验与 16 MiB 备份逐项一致；`TOUCH 1..3` + `MOOD happy/excited/happy`；退出码 0。板上现运行 `app1`，`app0` 可切回。整片恢复写回仍未验证。 [验收记录](../test-worksheets/01-硬件到货清单.md#p0-a-双向联调验收2026-11-13-21582205measured) |
 | 2026-11-13 21:15 | DeepSeek | **CP1 核心判据达成**：`contracts`/`perception-core` 加 `std`/`no_std+alloc` 双 feature；改 5 个点（定长集合去重、`core::fmt`、`core::error::Error`、Schema 段 `#[cfg(std)]`、依赖 feature 拆分），host 向下游 `default-features=false` 再自开 `std`。 | `8f11476`。`cargo build --no-default-features` 双 crate 通过；模拟器同一输入两种配置输出 **9 行逐字节相同**；`verify.ps1 -SkipAudit` PASS。**未覆盖**：重复/过期场景仍只有 std 单测，待做 CLI 场景 + 脚本化对拍并入门禁。 |
 | 2026-11-13 20:41 | GPT | 复跑门禁，核对 Git、分区备份和现有源码。补全 CP1/CP1b、现场并行项与交回模板，并校正现行基线的旧口径。 | 受检 `8b71e0d`。42 项测试通过，审计仍为 1 项。 [门禁证据](../TECHNICAL_DEBT.md#1-审查基线) |
