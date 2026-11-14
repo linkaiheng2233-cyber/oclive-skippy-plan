@@ -349,6 +349,55 @@ fn run_serve(listener_address: &str, seconds: u64) -> bool {
     println!("  served {served} connection(s)");
     served > 0
 }
+/// UDP 广播发现：向 `255.255.255.255:47901` 发 `GS-DISCOVER`，
+/// 等板子回 `GS-HERE <ip>:<port>`，再用返回地址建立 TCP 会话。
+fn run_discover(seconds: u64) -> bool {
+    use std::net::UdpSocket;
+    println!("bench: discover");
+    let socket = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(socket) => socket,
+        Err(error) => {
+            println!("  bind failed: {error}");
+            return false;
+        }
+    };
+    if let Err(error) = socket.set_broadcast(true) {
+        println!("  set_broadcast failed: {error}");
+        return false;
+    }
+    let _ = socket.set_read_timeout(Some(std::time::Duration::from_millis(800)));
+    if let Err(error) = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901") {
+        println!("  broadcast failed: {error}");
+        return false;
+    }
+    let mut buffer = [0u8; 256];
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
+    while std::time::Instant::now() < deadline {
+        match socket.recv_from(&mut buffer) {
+            Ok((count, peer)) => {
+                let text = String::from_utf8_lossy(&buffer[..count]).trim().to_owned();
+                println!("  reply from {peer}: {text}");
+                if let Some(rest) = text.strip_prefix("GS-HERE ") {
+                    return run_tcp(rest.trim(), 8);
+                }
+                // 不是应答就再广播一次，继续等。
+                let _ = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901");
+            }
+            Err(error)
+                if error.kind() == std::io::ErrorKind::WouldBlock
+                    || error.kind() == std::io::ErrorKind::TimedOut =>
+            {
+                let _ = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901");
+            }
+            Err(error) => {
+                println!("  recv failed: {error}");
+                return false;
+            }
+        }
+    }
+    println!("  no device answered");
+    false
+}
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
     let ok = match args.first().map(String::as_str) {
@@ -364,6 +413,13 @@ fn main() -> ExitCode {
                 .unwrap_or(10);
             run_tcp(&address, seconds)
         }
+        Some("--discover") => {
+            let seconds = args
+                .get(1)
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(10);
+            run_discover(seconds)
+        }
         Some("--serve") => {
             let address = args
                 .get(1)
@@ -377,7 +433,7 @@ fn main() -> ExitCode {
         }
         Some(other) => {
             eprintln!("unknown mode: {other}");
-            eprintln!("usage: ailive-gun-spirit-bench [--simulate | --serve <addr> [s] | --tcp <addr> [s]]");
+            eprintln!("usage: ailive-gun-spirit-bench [--simulate | --discover [s] | --serve <addr> [s] | --tcp <addr> [s]]");
             return ExitCode::from(2);
         }
     };
@@ -387,4 +443,3 @@ fn main() -> ExitCode {
         ExitCode::FAILURE
     }
 }
-

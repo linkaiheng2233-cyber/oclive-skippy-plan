@@ -28,4 +28,9 @@ void pump(uint32_t now_ms);
 /// 显示层实现：按表情 id 切换，成功返回 true。
 bool apply_mood(const char *id);
 
+/// 帧发送出口。默认写串口；Wi-Fi 连接后由传输层替换为 socket 写入。
+using FrameWriter = size_t (*)(const uint8_t *data, size_t length);
+void set_frame_writer(FrameWriter writer);
+
 }  // namespace gunspirit::wire
+

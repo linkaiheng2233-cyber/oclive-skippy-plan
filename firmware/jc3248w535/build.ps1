@@ -8,7 +8,9 @@ param(
     # 外部资产模式：像素不进固件，改为生成 assets.bin 供写入 ffat 资产区。
     [switch]$BlobAssets,
     # 链接 Rust 感知内核静态库（先跑 scripts/build-kernel-lib.ps1 生成）
-    [switch]$WithKernel
+    [switch]$WithKernel,
+    # 启用 Wi-Fi STA 链路（需要外部资产，否则二进制超过 2 MiB 分区）
+    [switch]$WithWifi
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,7 +64,7 @@ foreach ($name in $drivers.Keys) {
     Copy-Item -LiteralPath $source -Destination $sketch
 }
 
-foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'gs_wire.cpp', 'gs_wire.h', 'kernel_bridge.h', 'lv_conf.h', 'portrait_assets.h') {
+foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'gs_wire.cpp', 'gs_wire.h', 'kernel_bridge.h', 'wifi_link.cpp', 'wifi_link.h', 'lv_conf.h', 'portrait_assets.h') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Jc3248w535\$name") -Destination $sketch
 }
 $assetArguments = @($MumuRole, $sketch)
@@ -105,6 +107,9 @@ if ($BlobAssets) {
 if ($WithKernel) {
     $lvglFlags = $lvglFlags + ' -DGS_KERNEL_ENABLED'
 }
+if ($WithWifi) {
+    $lvglFlags = $lvglFlags + ' -DGS_WIFI_ENABLED'
+}
 if ($ExtraDefines) {
     $lvglFlags = $lvglFlags + ' ' + $ExtraDefines
 }
@@ -117,6 +122,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 Copy-Item -LiteralPath (Join-Path $ToolRoot 'sketch\mumu-assets.json') -Destination $output
+
 
 
 

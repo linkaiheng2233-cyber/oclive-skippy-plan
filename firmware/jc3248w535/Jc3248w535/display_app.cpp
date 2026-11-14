@@ -24,6 +24,9 @@
 #ifdef GS_KERNEL_ENABLED
 #include "kernel_bridge.h"
 #endif
+#ifdef GS_WIFI_ENABLED
+#include "wifi_link.h"
+#endif
 #include "esp_bsp.h"
 #include "portrait_assets.h"
 
@@ -248,6 +251,12 @@ void handle_command(const char *command) {
         Serial.printf("KERNEL abi=%u self_test_revision=%d current_revision=%llu\n",
                       static_cast<unsigned>(abi), revision,
                       static_cast<unsigned long long>(current));
+        return;
+    }
+#endif
+#ifdef GS_WIFI_ENABLED
+    // Wi-Fi 链路：凭据写入 NVS，永不进入仓库。
+    if (gunspirit::wifi_link::command(command)) {
         return;
     }
 #endif
@@ -545,6 +554,9 @@ void setup() {
     }
     report_memory("assets_loaded");
 #endif
+#ifdef GS_WIFI_ENABLED
+    gunspirit::wifi_link::begin();
+#endif
     touch_events = xQueueCreate(16, sizeof(TouchEvent));
     if (!touch_events) {
         report_ready();
@@ -577,6 +589,9 @@ void loop() {
         }
     }
 #endif
+#ifdef GS_WIFI_ENABLED
+    gunspirit::wifi_link::pump();
+#endif
     gunspirit::wire::pump(millis());
     TouchEvent touch;
     if (touch_events && xQueueReceive(touch_events, &touch, 0) == pdTRUE && Serial) {
@@ -584,6 +599,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 

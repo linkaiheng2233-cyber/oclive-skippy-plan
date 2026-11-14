@@ -55,6 +55,19 @@ char s_boot_id[32] = "board-boot-0";
 uint8_t s_buffer[kMaxFrame];
 size_t s_length = 0;
 
+size_t serial_writer(const uint8_t *data, size_t length) {
+    return Serial.write(data, length);
+}
+
+FrameWriter s_writer = nullptr;
+
+size_t write_bytes(const uint8_t *data, size_t length) {
+    if (s_writer != nullptr) {
+        return s_writer(data, length);
+    }
+    return serial_writer(data, length);
+}
+
 uint16_t crc16_ccitt_false(const uint8_t *data, size_t length) {
     uint16_t crc = 0xFFFF;
     for (size_t index = 0; index < length; ++index) {
@@ -105,7 +118,7 @@ bool send_frame(uint8_t type, const uint8_t *payload, size_t length) {
     const uint16_t crc = crc16_ccitt_false(frame, kHeaderLen + length);
     write_u16(&frame[kHeaderLen + length], crc);
     const size_t total = kHeaderLen + length + kCrcLen;
-    return Serial.write(frame, total) == total;
+    return write_bytes(frame, total) == total;
 }
 
 void send_hello() {
@@ -315,6 +328,10 @@ bool active() {
     return s_active;
 }
 
+void set_frame_writer(FrameWriter writer) {
+    s_writer = writer;
+}
+
 void feed(uint8_t byte) {
     if (s_length >= sizeof(s_buffer)) {
         // 溢出保护：丢掉最旧的一个字节再接收。
@@ -348,5 +365,6 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 
 
