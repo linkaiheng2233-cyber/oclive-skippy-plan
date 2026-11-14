@@ -147,6 +147,7 @@
 | `KTICK` | 手动推进内核时间（触发 TTL） |
 | `KERNEL` | ABI 版本 + 自检 revision |
 | `WIRE on\|off` | 切换帧协议 / ASCII |
+| `TOUCHDBG on|off` | 每 200 ms 打印 LVGL 输入设备原始坐标（排查触摸映射） |
 | `SETTINGS on\|off` | 打开/关闭屏幕设置层（无需触摸） |
 | `WIFI <ssid> <pass>` / `WIFI status` / `WIFI scan` / `WIFI forget` | Wi-Fi 管理 |
 
@@ -227,5 +228,6 @@
 2. **看门狗策略**：只挂 UI，还是也监控 reducer/sensor 心跳？
 3. **版本标识方案**：构建期注入 git 哈希（需要 build.ps1 支持）是否值得？
 4. **coredump 启用**：读出来做什么（串口打印？Overlay？）
+
 
 

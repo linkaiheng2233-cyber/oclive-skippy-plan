@@ -145,6 +145,11 @@ size_t current_portrait = 0;
 uint32_t touch_sequence = 0;
 QueueHandle_t touch_events;
 bool display_ready = false;
+// 触摸探针：直接读 LVGL 输入设备状态与归一化坐标，用于判断
+// "没读到按下" 还是 "坐标被旋转打偏"。
+lv_indev_t *touch_indev = nullptr;
+bool touch_debug = false;
+uint32_t touch_debug_last_ms = 0;
 
 constexpr size_t max_line = 48;
 char line[max_line + 1];
@@ -352,6 +357,17 @@ void handle_command(const char *command) {
         gunspirit::wire::end();
         return;
     }
+    // 触摸探针开关：TOUCHDBG on|off
+    if (strncmp(command, "TOUCHDBG", 8) == 0) {
+        const char *arg = command + 8;
+        while (*arg == ' ') {
+            ++arg;
+        }
+        touch_debug = strcmp(arg, "on") == 0;
+        Serial.printf("TOUCHDBG enabled=%d indev=%s\n", touch_debug ? 1 : 0,
+                      touch_indev != nullptr ? "yes" : "no");
+        return;
+    }
     // 设置层开关（串口可直接验证，不必触摸）。
     if (strncmp(command, "SETTINGS", 8) == 0) {
         const char *arg = command + 8;
@@ -367,6 +383,17 @@ void handle_command(const char *command) {
         return;
     }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
+    // 触摸探针开关：TOUCHDBG on|off
+    if (strncmp(command, "TOUCHDBG", 8) == 0) {
+        const char *arg = command + 8;
+        while (*arg == ' ') {
+            ++arg;
+        }
+        touch_debug = strcmp(arg, "on") == 0;
+        Serial.printf("TOUCHDBG enabled=%d indev=%s\n", touch_debug ? 1 : 0,
+                      touch_indev != nullptr ? "yes" : "no");
+        return;
+    }
     // 设置层开关（串口可直接验证，不必触摸）。
     if (strncmp(command, "SETTINGS", 8) == 0) {
         const char *arg = command + 8;
@@ -709,6 +736,7 @@ void setup() {
     };
     lv_disp_t *display = bsp_display_start_with_config(&config);
     if (display && bsp_display_lock(1000)) {
+        touch_indev = bsp_display_get_input_dev();
         create_ui(display);
         gunspirit::settings_ui::create(lv_disp_get_scr_act(display));
         gunspirit::settings_ui::set_provider(fill_settings_snapshot);
@@ -732,6 +760,16 @@ void loop() {
 #endif
     gunspirit::imu_service(millis());
     gunspirit::settings_ui::tick(millis());
+    if (touch_debug && touch_indev != nullptr && millis() - touch_debug_last_ms >= 200) {
+        touch_debug_last_ms = millis();
+        if (bsp_display_lock(20)) {
+            lv_point_t point = {0, 0};
+            lv_indev_get_point(touch_indev, &point);
+            Serial.printf("TOUCHDBG x=%d y=%d\n", static_cast<int>(point.x),
+                          static_cast<int>(point.y));
+            bsp_display_unlock();
+        }
+    }
 #ifdef GS_WIFI_ENABLED
     gunspirit::wifi_link::pump();
 #endif
@@ -742,6 +780,8 @@ void loop() {
     }
     delay(5);
 }
+
+
 
 
 
