@@ -58,5 +58,10 @@ path = "src/bin/bench_host.rs"
 name = "ailive-gun-spirit-scenario"
 path = "src/bin/scenario.rs"
 
+[[bin]]
+name = "ailive-gun-spirit-distro"
+path = "src/bin/distro.rs"
+
+
 
 

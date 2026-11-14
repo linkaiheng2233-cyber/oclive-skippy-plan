@@ -4,6 +4,7 @@
 //! OCLive adapters, while neither kernel is allowed to depend on the other.
 
 pub mod bench;
+pub mod distro;
 mod oclive_adapter;
 pub mod scenario;
 
