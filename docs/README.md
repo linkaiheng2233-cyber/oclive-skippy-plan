@@ -61,6 +61,7 @@
 | `P0A_FIRMWARE_PLATFORM.md` | **板端运行平台设计**（板子的"操作系统"）：启动序列、任务模型、时钟、内存与存储、配置面、诊断、故障恢复、ABI 契约；状态 `CANDIDATE` |
 | `SCENARIO_FORMAT.md` | **场景文件规范 v1**：2.5D 坐标、内置图元、四种玩法、固定校验顺序、分享与版本；状态 `CANDIDATE` |
 | `SCREEN_OS.md` | **屏幕操作系统**：分层、页面清单、状态机、单一数据源、双屏一致、触摸约定、性能预算、降级；状态 `CANDIDATE` |
+| `ROLE_KERNEL_INTEGRATION.md` | **三块分离设计**：感知内核 / 游戏 / 角色内核的边界、`GameSignal` 与 `RoleCue` 契约、延迟分层与仲裁、S1–S5 落地顺序；状态 `CANDIDATE` |
 | `DISTRO_BASELINE.md` | **枪娘发行版基础**：四层组成与 SSOT、版本与兼容、包结构与校验、红线、MVP 路径；状态 `CANDIDATE` |
 | `P0A_SOFTWARE_DESIGN.md` | **P0-A 软件实现设计**：分层、任务与时钟、消息语义分阶段、降级与验收映射；状态 `CANDIDATE` |
 | `PROTOCOL_V1_DRAFT.md` | **S2 帧协议草案**（USB 与 Wi-Fi 同一语义）：帧格式/CRC、消息类型、会话与去重、按类型分派校验、标识符上限、错误处理；状态 `CANDIDATE` |
@@ -100,5 +101,6 @@
 - `ARMV7_VALIDATION.md`：旧Lyra/ARMv7回退路线的历史与兼容证据。
 
 这些文件若与项目基线、ADR或领域SSOT冲突，不具有覆盖权。
+
 
 
