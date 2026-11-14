@@ -303,6 +303,34 @@ KERNEL abi=1 self_test_revision=2 current_revision=0
 ⇒ ADR-069「内核跑在板上」从"编译可链接"升级为**运行期证据**。
 
 **下一步（M4 第二半）**：让内核驱动真实 STATE——扩展 C ABI 为 `gs_kernel_init` / `gs_kernel_ingest_*` / `gs_kernel_encode_state`，使 `gs_wire` 发布的 STATE 来自内核快照，而非当前的"全 Unknown 占位"。
+
+### 6.5.4 M4 完成：内核驱动真实 STATE（`MEASURED`，2026-11-14）
+
+**链路**：串口 `KGRIP` → 内核摄入观测 → `gs_kernel_encode_state`（Rust 编码器）→ 帧协议 → 串口桥 → PC 台架解码。
+
+**实测输出**：
+
+```
+hello=1 states=9
+snapshot revision=2
+  carrier=Known { value_code: 1, observed_at_ms: 12144, fresh_until_ms: 13144, confidence_milli: 700 }
+  front  =Known { value_code: 0, observed_at_ms: 12143, ... }
+  rear   =Known { value_code: 0, observed_at_ms: 12144, ... }
+  motion =Unknown { reason_code: 0, since_revision: 0 }
+  pose   =Unknown { reason_code: 0, since_revision: 0 }
+  control=Unknown { reason_code: 0, since_revision: 0 }
+  nodes  = 1
+```
+
+判读：
+- `carrier value_code=1` = **Held**，`front/rear value_code=0` = **Engaged** → 融合结果正确
+- 未提供的传感器保持 `Unknown(NeverObserved)`，**没有伪造**任何事实
+- `revision` 停在 2 且时间戳持续刷新：重复摄入**同值**只刷新证据时效、不推进 revision，符合 reducer 语义
+- `nodes=1`：内核的节点健康记录经协议传到主机
+
+**关于 `KSYNTH`**：无 IMU 时的台架合成观测源（每 200 ms 重摄入当前 `KGRIP` 握持状态），**代码中明确标注为合成**。IMU 到货后删除该路径，改为 I²C 读取循环；内核、协议、台架一行不用改。
+
+**里程碑状态**：M1 / M2 / M3 / **M4 全部完成**；剩余 M5（Wi-Fi STA 自动发现与断线重连）。
 ## 6. 验收映射
 
 | 检查点 | 软件侧判据 |
@@ -319,6 +347,7 @@ KERNEL abi=1 self_test_revision=2 current_revision=0
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 
 
 
