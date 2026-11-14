@@ -38,8 +38,10 @@ struct Snapshot {
 
 using SettingsProvider = void (*)(Snapshot *snapshot);
 
-/// 创建设置层（默认隐藏）。`display` 由调用方提供，用于挂到当前屏幕。
-void create(lv_disp_t *display);
+/// 创建设置屏（独立 LVGL 屏幕，默认不显示）。
+/// 用独立屏幕而不是遮罩层：板厂 BSP 的触摸走 LVGL 标准 indev，
+/// 独立屏幕 + `lv_scr_load` 是最不容易出问题的路径。
+void create(lv_obj_t *main_screen);
 
 /// 注册快照来源。
 void set_provider(SettingsProvider provider);
@@ -56,3 +58,4 @@ void tick(unsigned long now_ms);
 void invalidate();
 
 }  // namespace gunspirit::settings_ui
+

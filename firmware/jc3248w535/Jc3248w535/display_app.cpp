@@ -710,8 +710,8 @@ void setup() {
     lv_disp_t *display = bsp_display_start_with_config(&config);
     if (display && bsp_display_lock(1000)) {
         create_ui(display);
-    gunspirit::settings_ui::create(display);
-    gunspirit::settings_ui::set_provider(fill_settings_snapshot);
+        gunspirit::settings_ui::create(lv_disp_get_scr_act(display));
+        gunspirit::settings_ui::set_provider(fill_settings_snapshot);
         bsp_display_unlock();
         display_ready = bsp_display_backlight_on() == ESP_OK;
     }
@@ -742,6 +742,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 
