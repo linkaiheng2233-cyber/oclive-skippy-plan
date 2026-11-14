@@ -34,6 +34,8 @@ try {
         Invoke-Checked "format $manifest" cargo @('fmt', '--manifest-path', $manifest, '--', '--check')
     }
 
+    Invoke-Checked 'distro layout' pwsh @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'check-distro.ps1'))
+
     & (Join-Path $PSScriptRoot 'check-workspace-boundaries.ps1')
     if ($LASTEXITCODE -ne 0) {
         throw "workspace boundary check failed with exit code $LASTEXITCODE"
@@ -67,3 +69,4 @@ try {
 finally {
     Pop-Location
 }
+

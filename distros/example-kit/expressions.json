@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "vocabulary": [
+    { "id": "neutral", "label": "平静", "asset": "portraits/neutral" },
+    { "id": "happy", "label": "开心", "asset": "portraits/happy" },
+    { "id": "excited", "label": "兴奋", "asset": "portraits/excited" },
+    { "id": "shy", "label": "害羞", "asset": "portraits/shy" },
+    { "id": "confused", "label": "困惑", "asset": "portraits/confused" },
+    { "id": "sad", "label": "失落", "asset": "portraits/sad" },
+    { "id": "angry", "label": "生气", "asset": "portraits/angry" }
+  ],
+  "default": "neutral",
+  "manual_hold_s": 5.0
+}

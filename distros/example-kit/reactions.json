@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "reactions": [
+    { "event": "carrier.held_entered", "expression": "happy", "cooldown_s": 3.0, "priority": 3 },
+    { "event": "carrier.held_exited", "expression": "neutral", "cooldown_s": 3.0, "priority": 3 },
+    { "event": "carrier.ready_entered", "expression": "excited", "cooldown_s": 5.0, "priority": 2 },
+    { "event": "carrier.ready_exited", "expression": "neutral", "cooldown_s": 5.0, "priority": 2 },
+    { "event": "control.primary.engaged", "expression": "excited", "cooldown_s": 0.3, "priority": 1 },
+    { "event": "control.primary.released", "expression": "neutral", "cooldown_s": 0.3, "priority": 1 }
+  ]
+}

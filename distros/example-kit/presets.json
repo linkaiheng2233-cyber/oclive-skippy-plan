@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "expression_min_dwell_s": 0.3,
+    "perception_stable_window_s": 0.2,
+    "pose_raised_threshold_deg": 5.0,
+    "grip_strength_threshold_milli": 300
+  },
+  "offline": {
+    "idle_expression": "neutral",
+    "touch_expression": "happy",
+    "auto_rotate": false
+  }
+}

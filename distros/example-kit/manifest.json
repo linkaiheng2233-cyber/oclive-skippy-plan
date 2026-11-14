@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "mumu-range-kit",
+  "name": "沐沐虚拟靶场示例包",
+  "author": "example",
+  "distro_version": "0.1.0",
+  "role_ref": {
+    "id": "mumu",
+    "version": ">=1.0.0"
+  },
+  "requires_firmware": ">=0.1.0 <2.0.0",
+  "requires_contract": "0.3",
+  "limits": {
+    "max_total_bytes": 8388608
+  },
+  "files": [
+    {
+      "path": "expressions.json",
+      "sha256": "c0560679d8ff4e338fa10ce0566a91443aaf345b247bddf84ce84696bc832cfd",
+      "bytes": 592
+    },
+    {
+      "path": "presets.json",
+      "sha256": "d2fd8576a19f5c1485155aad5ce3ba2b9156f5e9ad6f3b589fc643ac11a87819",
+      "bytes": 311
+    },
+    {
+      "path": "reactions.json",
+      "sha256": "cf385f045953fe2534c0f3678609f98403ec9277ba5f5cc4187339523fc31167",
+      "bytes": 652
+    },
+    {
+      "path": "scenarios/basic-range.scn.json",
+      "sha256": "01521116c8c4a7f1410764f4b0b4107c5a0abe4a0a77afc58604b88d3b8166da",
+      "bytes": 1317
+    }
+  ]
+}

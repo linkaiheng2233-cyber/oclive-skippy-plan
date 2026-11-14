@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "basic-range",
+  "name": "基础靶场",
+  "author": "example",
+  "seed": 20261114,
+  "arena": {
+    "width": 12.0,
+    "height": 6.0,
+    "background": "grid"
+  },
+  "mode": {
+    "kind": "wave",
+    "duration_s": 120,
+    "waves": [
+      { "at_s": 0, "targets": 3 },
+      { "at_s": 20, "targets": 5 },
+      { "at_s": 45, "targets": 6 }
+    ]
+  },
+  "cover": [
+    { "shape": "box", "x": 4.0, "y": 0.5, "z": -1.0, "w": 1.2, "h": 1.0 },
+    { "shape": "circle", "x": -3.0, "y": 0.8, "r": 0.6 },
+    { "shape": "wall", "x": 0.0, "y": 1.5, "z": -3.0, "w": 12.0, "h": 3.0 }
+  ],
+  "targets": [
+    {
+      "template": "drone",
+      "count": 3,
+      "hp": 2,
+      "path": { "kind": "sine", "amplitude": 3.0, "speed": 1.2, "phase_s": 0.0 },
+      "spawn": { "x": -5.0, "y": 1.2, "z": 0.0 }
+    },
+    {
+      "template": "dummy",
+      "count": 2,
+      "hp": 1,
+      "path": { "kind": "static" },
+      "spawn": { "x": 3.5, "y": 1.0, "z": 0.5 }
+    }
+  ],
+  "scoring": {
+    "hit_points": 10,
+    "miss_penalty": -2,
+    "precision_bonus_radius_m": 0.15
+  },
+  "audio": [
+    { "id": "hit", "asset": "sfx/hit.wav" },
+    { "id": "miss", "asset": "sfx/miss.wav" }
+  ],
+  "presentation": {
+    "character_anchor": "left",
+    "character_visibility": 0.8,
+    "tint": "#1A2233"
+  }
+}
