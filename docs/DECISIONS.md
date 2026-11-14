@@ -1100,3 +1100,24 @@ GripContact { contact, strength_milli }     ← 没有判别字段
 
 **原因**：完全开源 + 早期小规模时，过度合规包装的收益低于沟通成本；而把"虚拟靶场"作为中性名称既准确又不过度承诺。技术红线与操作前提不变，因此命名的调整没有安全代价。
 
+
+## ADR-072：契约 v0.4——`producer_boot_id`、`magazine.seated`、`PreFeedLever`
+
+**背景**：`PROTOCOL_V1_DRAFT.md` §6.7 记着一个临时映射：`PerceptionState`/`DeviceEvent` 的字段名是 `host_boot_id`，但 P0-A 里这两个对象由**板端感知内核**产生（ADR-069），字段名与真实生产方不符。同时弹匣就位与预供弹两个动作已进入设计（`MAGAZINE_AMMO_ESTIMATION.md`、`GUN_INTERACTION_MATRIX.md`），需要契约值。
+
+**决定**（三项一起发，一次版本抬升）：
+
+1. **字段改名** `host_boot_id` → `producer_boot_id`（`PerceptionState` 与 `DeviceEvent` 两处）。语义：**产生该对象的启动会话标识**，不再暗示"主机"。
+2. 新增 `DeviceEventKind::MagazineSeated`（线格式 `magazine.seated`）：表示**检测到弹匣就位**，不表达弹药数量。
+3. 新增 `PrimaryControlId::PreFeedLever`：预供弹拉机柄到位，不参与火控。
+
+**影响**：
+
+- 旧 v0.3 载荷因字段改名**无法被新结构反序列化**——这是刻意的破坏性变更，因此抬到 v0.4；
+- `ContractVersion` 保留 `V0_3` 变体仅用于识别历史载荷，生产方统一填 `V0_4`；
+- schema 生成切到 `*.v0.4.schema.json`，v0.3 文件保留为历史；fixtures 新增 `v0.4/` 目录并补两个新值样例；
+- 板端 `gs_wire` 的 `kContractMinor` 同步为 4；内核 shim 输出 `V0_4` 并把线格式 minor 写 4。
+
+**验收**：`./scripts/verify.ps1`（schema 零漂移、契约 6 项测试、宿主 23 项、协议 31 项、no_std 对拍 3×2）。`cargo audit` 因网络无法拉取 advisory 数据库而跳过（环境原因，非回归）。
+
+**不做**：不改 `AIM` 流；不动 `source_refs`；不引入弹药计数（属 P1+ 的 G5 门禁后）。

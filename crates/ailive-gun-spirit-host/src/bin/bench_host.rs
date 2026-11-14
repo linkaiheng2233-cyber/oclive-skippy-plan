@@ -54,7 +54,7 @@ fn state_frame(revision: u64) -> Vec<u8> {
     let state = WireState {
         contract_major: CONTRACT_MAJOR,
         contract_minor: CONTRACT_MINOR,
-        host_boot_id: String::from(BOARD_BOOT),
+        producer_boot_id: String::from(BOARD_BOOT),
         revision,
         produced_at_ms: revision * 10,
         carrier_state: known(1),
@@ -81,7 +81,7 @@ fn event_frame(event_id: &str) -> Vec<u8> {
         contract_major: CONTRACT_MAJOR,
         contract_minor: CONTRACT_MINOR,
         event_id: String::from(event_id),
-        host_boot_id: String::from(BOARD_BOOT),
+        producer_boot_id: String::from(BOARD_BOOT),
         occurred_at_ms: 100,
         caused_by_revision: 1,
         kind_code: 0,

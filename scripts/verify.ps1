@@ -28,6 +28,7 @@ try {
     $manifests = @(
         'crates/ailive-gun-spirit-contracts/Cargo.toml',
         'crates/ailive-gun-spirit-perception-core/Cargo.toml',
+        'crates/ailive-gun-spirit-protocol/Cargo.toml',
         'crates/ailive-gun-spirit-host/Cargo.toml'
     )
     foreach ($manifest in $manifests) {
@@ -69,4 +70,5 @@ try {
 finally {
     Pop-Location
 }
+
 

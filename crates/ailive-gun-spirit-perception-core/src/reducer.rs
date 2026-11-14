@@ -108,7 +108,7 @@ struct ResolvedSnapshot {
 /// Adapters still own ADC/IMU sampling, filtering, BLE and Host time acquisition.
 #[derive(Debug, Clone)]
 pub struct PerceptionReducer {
-    host_boot_id: BootId,
+    producer_boot_id: BootId,
     profile: PerceptionProfile,
     /// 每个已声明节点一条session，键为`node_uid`，与`profile.nodes()`同序。
     sessions: Vec<(NodeUid, NodeSession)>,
@@ -126,7 +126,7 @@ pub struct PerceptionReducer {
 }
 
 impl PerceptionReducer {
-    pub fn new(host_boot_id: BootId, profile: PerceptionProfile, now_ms: u64) -> Self {
+    pub fn new(producer_boot_id: BootId, profile: PerceptionProfile, now_ms: u64) -> Self {
         let sessions = profile
             .nodes()
             .map(|(node_uid, _)| (node_uid.clone(), NodeSession::default()))
@@ -139,8 +139,8 @@ impl PerceptionReducer {
             })
             .collect();
         let current = PerceptionState {
-            contract_version: ContractVersion::V0_3,
-            host_boot_id: host_boot_id.clone(),
+            contract_version: ContractVersion::V0_4,
+            producer_boot_id: producer_boot_id.clone(),
             revision: 0,
             produced_at_monotonic_ms: now_ms,
             carrier_state: never_observed(),
@@ -152,7 +152,7 @@ impl PerceptionReducer {
             node_health,
         };
         Self {
-            host_boot_id,
+            producer_boot_id,
             profile,
             sessions,
             front_grip: None,
@@ -400,7 +400,7 @@ impl PerceptionReducer {
     ) -> Result<ReductionOutput, ReducerError> {
         let resolved = self.resolve(now_ms);
         let same_revision_snapshot = render_snapshot(
-            &self.host_boot_id,
+            &self.producer_boot_id,
             self.current.revision,
             now_ms,
             &resolved,
@@ -423,7 +423,7 @@ impl PerceptionReducer {
             .checked_add(1)
             .ok_or(ReducerError::RevisionOverflow)?;
         self.current = render_snapshot(
-            &self.host_boot_id,
+            &self.producer_boot_id,
             revision,
             now_ms,
             &resolved,
@@ -825,15 +825,15 @@ fn node_is_offline(session: &NodeSession, now_ms: u64, offline_ttl_ms: u64) -> b
 }
 
 fn render_snapshot(
-    host_boot_id: &BootId,
+    producer_boot_id: &BootId,
     revision: u64,
     now_ms: u64,
     resolved: &ResolvedSnapshot,
     previous: &PerceptionState,
 ) -> PerceptionState {
     PerceptionState {
-        contract_version: ContractVersion::V0_3,
-        host_boot_id: host_boot_id.clone(),
+        contract_version: ContractVersion::V0_4,
+        producer_boot_id: producer_boot_id.clone(),
         revision,
         produced_at_monotonic_ms: now_ms,
         carrier_state: render_fact(&resolved.carrier_state, &previous.carrier_state, revision),

@@ -10,7 +10,7 @@
 //! u16 contract_major
 //! u16 contract_minor
 //! 1+n event_id   (n 1..=128)
-//! 1+n host_boot_id (n 1..=128)
+//! 1+n producer_boot_id (n 1..=128)
 //! u64 occurred_at_monotonic_ms
 //! u64 caused_by_perception_revision
 //! u8  kind_code (0..=5)
@@ -40,7 +40,7 @@ pub struct WireEvent {
     pub contract_major: u16,
     pub contract_minor: u16,
     pub event_id: String,
-    pub host_boot_id: String,
+    pub producer_boot_id: String,
     pub occurred_at_ms: u64,
     pub caused_by_revision: u64,
     pub kind_code: u8,
@@ -62,7 +62,7 @@ impl WireEvent {
         writer.u16(self.contract_major)?;
         writer.u16(self.contract_minor)?;
         writer.string(&self.event_id, MAX_ID_LEN)?;
-        writer.string(&self.host_boot_id, MAX_ID_LEN)?;
+        writer.string(&self.producer_boot_id, MAX_ID_LEN)?;
         writer.u64(self.occurred_at_ms)?;
         writer.u64(self.caused_by_revision)?;
         writer.u8(self.kind_code)?;
@@ -77,7 +77,7 @@ impl WireEvent {
         let contract_major = reader.u16()?;
         let contract_minor = reader.u16()?;
         let event_id = String::from(reader.string(MAX_ID_LEN)?);
-        let host_boot_id = String::from(reader.string(MAX_ID_LEN)?);
+        let producer_boot_id = String::from(reader.string(MAX_ID_LEN)?);
         let occurred_at_ms = reader.u64()?;
         let caused_by_revision = reader.u64()?;
         let kind_code = reader.u8()?;
@@ -89,7 +89,7 @@ impl WireEvent {
             contract_major,
             contract_minor,
             event_id,
-            host_boot_id,
+            producer_boot_id,
             occurred_at_ms,
             caused_by_revision,
             kind_code,
@@ -108,7 +108,7 @@ mod tests {
             contract_major: 0,
             contract_minor: 3,
             event_id: String::from("evt-000123"),
-            host_boot_id: String::from("board-boot-7"),
+            producer_boot_id: String::from("board-boot-7"),
             occurred_at_ms: 98_765,
             caused_by_revision: 41,
             kind_code: KIND_CARRIER_READY_ENTERED,

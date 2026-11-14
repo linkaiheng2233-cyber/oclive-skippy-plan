@@ -83,7 +83,7 @@ Rust类型是语义真源。实现时由`ailive-gun-spirit-contracts`确定性�
 ## 时间与未知态
 
 - 节点字段：`node_uid`、`boot_id`、`sequence`、`node_monotonic_ms`。
-- Host接收字段：`host_boot_id`、`received_monotonic_ms`。
+- Host接收字段：`producer_boot_id`（v0.4 前为 `host_boot_id`）、`received_monotonic_ms`。
 - 节点时间只在同一node/boot内排序；不同节点时间禁止直接比较。跨节点TTL和融合使用Host单调时间，wall-clock只用于诊断。
 - **`sequence` 是每个节点一条共用账本，不按传感器分别计数**：同一节点内 `sequence` 相同而载荷不同即 `SequenceCollision`。单板形态下 ESP32 必须对全部观察种类使用同一个单调序号，否则第一条就撞。
 - PerceptionState事实使用`Known<T>`或`Unknown`判别联合。P0 unknown reason闭集：`never_observed`、`node_offline`、`stale`、`uncalibrated`、`sensor_fault`。
@@ -103,3 +103,4 @@ Rust类型是语义真源。实现时由`ailive-gun-spirit-contracts`确定性�
 - **`NodeHello` 仍未实现**（`GS-CONTRACT-004`）。P0-A 单板形态可由 Host 侧静态配置能力集，不阻塞；真实板要"自己声明能力"时才需要。
 - PerceptionState只在语义Fact/节点健康等权威状态变化时递增revision。新订阅、重连、renderer恢复和健康心跳可以重发相同revision完整快照。
 - 相同revision重发不是新状态，禁止产生DeviceEvent或角色回合。心跳周期不是schema字段，由HostProfile和实测决定。
+

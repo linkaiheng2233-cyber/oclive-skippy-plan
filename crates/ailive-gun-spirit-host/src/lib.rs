@@ -122,7 +122,7 @@ impl InputScheduler {
             });
         }
         for event in events {
-            if event.host_boot_id != perception.host_boot_id {
+            if event.producer_boot_id != perception.producer_boot_id {
                 return Err(InputScheduleError::HostBootMismatch);
             }
             if event.caused_by_perception_revision > perception.revision {
@@ -265,8 +265,8 @@ mod tests {
 
     fn state(revision: u64) -> PerceptionState {
         PerceptionState {
-            contract_version: ContractVersion::V0_3,
-            host_boot_id: BootId::try_new("host-boot").unwrap(),
+            contract_version: ContractVersion::V0_4,
+            producer_boot_id: BootId::try_new("host-boot").unwrap(),
             revision,
             produced_at_monotonic_ms: 10,
             carrier_state: known(CarrierState::Held),
@@ -291,9 +291,9 @@ mod tests {
 
     fn event(revision: u64) -> DeviceEvent {
         DeviceEvent {
-            contract_version: ContractVersion::V0_3,
+            contract_version: ContractVersion::V0_4,
             event_id: EventId::try_new("event-1").unwrap(),
-            host_boot_id: BootId::try_new("host-boot").unwrap(),
+            producer_boot_id: BootId::try_new("host-boot").unwrap(),
             occurred_at_monotonic_ms: 10,
             caused_by_perception_revision: revision,
             kind: DeviceEventKind::CarrierHeldEntered,

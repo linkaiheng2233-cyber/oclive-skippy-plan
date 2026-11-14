@@ -1,0 +1,16 @@
+{
+  "contract_version": "0.4",
+  "observation_id": "obs-invalid-empty-node",
+  "node_uid": "",
+  "boot_id": "esp32-gun-01-boot-1",
+  "sequence": 8,
+  "node_monotonic_ms": 1400,
+  "observation": {
+    "kind": "grip_contact",
+    "payload": {
+      "grip": "front",
+      "contact": "engaged",
+      "strength_milli": 500
+    }
+  }
+}

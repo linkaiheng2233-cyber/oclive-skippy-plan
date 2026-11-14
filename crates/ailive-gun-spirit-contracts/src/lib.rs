@@ -34,8 +34,13 @@ pub const MAX_NODE_HEALTH_ENTRIES: usize = 8;
 /// 唯一生产者是同仓模拟器），因此不存在需要承接的兼容负担。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ContractVersion {
+    /// 历史版本：字段名仍为 `host_boot_id`，仅保留以便解析旧载荷。
     #[serde(rename = "0.3")]
     V0_3,
+    /// v0.4：`host_boot_id` → `producer_boot_id`；新增 `magazine.seated` 与
+    /// `PrimaryControlId::PreFeedLever`。
+    #[serde(rename = "0.4")]
+    V0_4,
 }
 
 macro_rules! string_id {
@@ -186,7 +191,10 @@ pub enum CarrierState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PrimaryControlId {
+    /// 主扳机触点。**注意**：P0 只读外部触点，不等于也不推断是否击发。
     PrimaryTrigger,
+    /// 预供弹拉机柄（拉栓到位）。用于表达"上膛/预供弹"动作，不参与火控。
+    PreFeedLever,
 }
 
 /// 握持位置判别，与`AuxControlContact.control_id`同一范式。
@@ -358,7 +366,7 @@ pub struct NodeHealth {
 #[serde(deny_unknown_fields)]
 pub struct PerceptionState {
     pub contract_version: ContractVersion,
-    pub host_boot_id: BootId,
+    pub producer_boot_id: BootId,
     pub revision: u64,
     pub produced_at_monotonic_ms: u64,
     pub carrier_state: Fact<CarrierState>,
@@ -380,7 +388,7 @@ impl PerceptionState {
     /// references remain available to consumers, but are not themselves state-machine revisions.
     pub fn has_same_revision_payload(&self, other: &Self) -> bool {
         self.contract_version == other.contract_version
-            && self.host_boot_id == other.host_boot_id
+            && self.producer_boot_id == other.producer_boot_id
             && self.revision == other.revision
             && fact_has_same_semantics(&self.carrier_state, &other.carrier_state)
             && fact_has_same_semantics(&self.front_grip, &other.front_grip)
@@ -423,6 +431,9 @@ pub enum DeviceEventKind {
     ControlPrimaryEngaged,
     #[serde(rename = "control.primary.released")]
     ControlPrimaryReleased,
+    /// 弹匣就位（换弹完成）。P0 只表达"检测到就位"，不做弹药计数。
+    #[serde(rename = "magazine.seated")]
+    MagazineSeated,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -430,7 +441,7 @@ pub enum DeviceEventKind {
 pub struct DeviceEvent {
     pub contract_version: ContractVersion,
     pub event_id: EventId,
-    pub host_boot_id: BootId,
+    pub producer_boot_id: BootId,
     pub occurred_at_monotonic_ms: u64,
     pub caused_by_perception_revision: u64,
     pub kind: DeviceEventKind,
@@ -521,7 +532,8 @@ impl<T> Fact<T> {
 impl ContractValidate for PerceptionState {
     fn validate(&self) -> Result<(), Vec<ValidationError>> {
         let mut errors = Vec::new();
-        self.host_boot_id.validate_at("host_boot_id", &mut errors);
+        self.producer_boot_id
+            .validate_at("producer_boot_id", &mut errors);
         self.carrier_state
             .validate_at("carrier_state", self.revision, &mut errors);
         self.front_grip
@@ -564,7 +576,8 @@ impl ContractValidate for DeviceEvent {
     fn validate(&self) -> Result<(), Vec<ValidationError>> {
         let mut errors = Vec::new();
         self.event_id.validate_at("event_id", &mut errors);
-        self.host_boot_id.validate_at("host_boot_id", &mut errors);
+        self.producer_boot_id
+            .validate_at("producer_boot_id", &mut errors);
         if self.caused_by_perception_revision == 0 {
             errors.push(ValidationError::new(
                 "caused_by_perception_revision",
@@ -660,24 +673,24 @@ impl From<serde_json::Error> for SchemaGenerationError {
 pub fn generated_schema_documents() -> Result<Vec<GeneratedSchema>, SchemaGenerationError> {
     Ok(vec![
         render_schema::<SensorObservation>(
-            "sensor-observation.v0.3.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/sensor-observation.v0.3.schema.json",
-            "A.I.Live Gun Spirit SensorObservation v0.3",
+            "sensor-observation.v0.4.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/sensor-observation.v0.4.schema.json",
+            "A.I.Live Gun Spirit SensorObservation v0.4",
         )?,
         render_schema::<AngularRateSample>(
-            "angular-rate-sample.v0.3.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/angular-rate-sample.v0.3.schema.json",
-            "A.I.Live Gun Spirit AngularRateSample v0.3",
+            "angular-rate-sample.v0.4.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/angular-rate-sample.v0.4.schema.json",
+            "A.I.Live Gun Spirit AngularRateSample v0.4",
         )?,
         render_schema::<PerceptionState>(
-            "perception-state.v0.3.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/perception-state.v0.3.schema.json",
-            "A.I.Live Gun Spirit PerceptionState v0.3",
+            "perception-state.v0.4.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/perception-state.v0.4.schema.json",
+            "A.I.Live Gun Spirit PerceptionState v0.4",
         )?,
         render_schema::<DeviceEvent>(
-            "device-event.v0.3.schema.json",
-            "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.3.schema.json",
-            "A.I.Live Gun Spirit DeviceEvent v0.3",
+            "device-event.v0.4.schema.json",
+            "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.4.schema.json",
+            "A.I.Live Gun Spirit DeviceEvent v0.4",
         )?,
     ])
 }

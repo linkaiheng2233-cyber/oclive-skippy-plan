@@ -1,0 +1,8 @@
+{
+  "contract_version": "0.4",
+  "event_id": "event-host-0002",
+  "producer_boot_id": "board-000000-1",
+  "occurred_at_monotonic_ms": 6100,
+  "caused_by_perception_revision": 5,
+  "kind": "magazine.seated"
+}

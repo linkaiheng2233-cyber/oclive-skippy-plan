@@ -675,7 +675,10 @@ Codec 选型（手写定长布局 / `postcard` / CBOR）列入 §11；无论选�
 - 即使 `STATE` 中 `Fact` 值发生变化，只要没有对应 `EVENT`，也不得把快照桥接成伪事件。
 - 该规则同时适用于首连基线、重连基线和同 revision 重发。
 
-### 6.7 `boot_id` 与 `host_boot_id` 的临时映射【临时】
+### 6.7 `boot_id` 与 `producer_boot_id` 的映射（v0.4 起为正式字段）
+
+**2026-11-14 决策（ADR-072，已落地）**：采纳**方案 C**——契约 v0.4 已把两个字段改名为 `producer_boot_id`，并把 `magazine.seated` 与 `PrimaryControlId::PreFeedLever` 一并纳入。本节的临时映射（方案 A）自 v0.4 起失效；`STATE/EVENT.producer_boot_id` 仍须等于当前会话的 `HELLO.boot_id`。
+
 
 `PerceptionState` 与 `DeviceEvent` 的字段名是 `host_boot_id`，但 P0-A 中这两个对象由**板上感知内核**产生并直接上行（ADR-069）。这产生一个契约命名与部署现实之间的缺口，ADR-069 也明确要求「明确设备启动会话到主机契约的映射」。
 
@@ -1280,3 +1283,4 @@ JSON 模式下，上述载荷的等价对象为：
 | `DeviceEventKind` | 1=`carrier.held_entered`，2=`carrier.held_exited`，3=`carrier.ready_entered`，4=`carrier.ready_exited`，5=`control.primary.engaged`，6=`control.primary.released` |
 | `ContractVersion` | major=0，minor=3（两字节） |
 | `Fact` 标签 | 0=`Unknown`，1=`Known` |
+

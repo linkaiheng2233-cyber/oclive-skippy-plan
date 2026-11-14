@@ -45,7 +45,7 @@ impl Node {
     fn observe(&mut self, millis: u64, kind: SensorObservationKind) -> SensorObservation {
         self.sequence += 1;
         SensorObservation {
-            contract_version: ContractVersion::V0_3,
+            contract_version: ContractVersion::V0_4,
             observation_id: ObservationId::try_new(format!(
                 "{}:{}:{}",
                 self.uid.as_str(),

@@ -65,7 +65,7 @@ impl PerceptionReplay {
             return Ok(ReplayDisposition::BaselineEstablished);
         };
 
-        if previous.host_boot_id != current.host_boot_id {
+        if previous.producer_boot_id != current.producer_boot_id {
             self.previous = Some(current);
             return Ok(ReplayDisposition::BaselineEstablished);
         }
@@ -198,8 +198,8 @@ mod tests {
         control: Fact<Contact>,
     ) -> PerceptionState {
         PerceptionState {
-            contract_version: ContractVersion::V0_3,
-            host_boot_id: BootId::try_new("host-boot-test").unwrap(),
+            contract_version: ContractVersion::V0_4,
+            producer_boot_id: BootId::try_new("host-boot-test").unwrap(),
             revision,
             produced_at_monotonic_ms: 100,
             carrier_state: carrier,
@@ -390,7 +390,7 @@ mod tests {
             ))
             .unwrap();
         let mut after_reboot = state(0, known(CarrierState::Ready), known(Contact::Released));
-        after_reboot.host_boot_id = BootId::try_new("host-boot-after-restart").unwrap();
+        after_reboot.producer_boot_id = BootId::try_new("host-boot-after-restart").unwrap();
 
         assert_eq!(
             replay.push(after_reboot),

@@ -1,0 +1,12 @@
+{
+  "contract_version": "0.4",
+  "observation_id": "obs-invalid-kind",
+  "node_uid": "esp32-gun-01",
+  "boot_id": "esp32-gun-01-boot-1",
+  "sequence": 7,
+  "node_monotonic_ms": 1400,
+  "observation": {
+    "kind": "weapon_fired",
+    "payload": {}
+  }
+}

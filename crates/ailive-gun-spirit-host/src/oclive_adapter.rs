@@ -141,9 +141,9 @@ mod tests {
         SensorTurnRequest {
             origin: InputOrigin::Sensor,
             events: vec![DeviceEvent {
-                contract_version: ContractVersion::V0_3,
+                contract_version: ContractVersion::V0_4,
                 event_id: EventId::try_new("event-1").unwrap(),
-                host_boot_id: BootId::try_new("boot-1").unwrap(),
+                producer_boot_id: BootId::try_new("boot-1").unwrap(),
                 occurred_at_monotonic_ms: 100,
                 caused_by_perception_revision: 7,
                 kind: DeviceEventKind::CarrierHeldEntered,

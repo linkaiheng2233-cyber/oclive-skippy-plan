@@ -133,7 +133,7 @@ impl MockNode {
             .checked_add(1)
             .ok_or_else(|| "mock node sequence overflow".to_owned())?;
         Ok(SensorObservation {
-            contract_version: ContractVersion::V0_3,
+            contract_version: ContractVersion::V0_4,
             observation_id: ObservationId::try_new(format!(
                 "{}:{}:{}",
                 self.uid.as_str(),
@@ -350,7 +350,7 @@ impl DesktopFixture {
 
         Ok(json!({
             "command": command,
-            "host_boot_id": snapshot.host_boot_id.as_str(),
+            "producer_boot_id": snapshot.producer_boot_id.as_str(),
             "revision": snapshot.revision,
             "disposition": disposition,
             "observation_count": observation_count,
@@ -479,10 +479,10 @@ impl DesktopFixture {
                     .checked_add(1)
                     .ok_or_else(|| "event sequence overflow".to_owned())?;
                 Ok(DeviceEvent {
-                    contract_version: ContractVersion::V0_3,
+                    contract_version: ContractVersion::V0_4,
                     event_id: EventId::try_new(format!("desktop-event-{}", self.event_sequence))
                         .map_err(|error| error.to_string())?,
-                    host_boot_id: snapshot.host_boot_id.clone(),
+                    producer_boot_id: snapshot.producer_boot_id.clone(),
                     occurred_at_monotonic_ms: snapshot.produced_at_monotonic_ms,
                     caused_by_perception_revision: snapshot.revision,
                     kind: *kind,
@@ -693,6 +693,7 @@ fn desktop_fixture_role_cue(request: &SensorTurnRequest) -> Option<RoleCue> {
         DeviceEventKind::ControlPrimaryReleased => {
             ("fixture.control_released", "桌面夹具：辅助触点释放")
         }
+        DeviceEventKind::MagazineSeated => ("fixture.magazine_seated", "桌面夹具：检测到弹匣就位"),
     };
     Some(RoleCue {
         source: RoleCueSource::DesktopFixture,

@@ -198,7 +198,7 @@ mod tests {
         WireState {
             contract_major: EXPECTED_CONTRACT_MAJOR,
             contract_minor: EXPECTED_CONTRACT_MINOR,
-            host_boot_id: String::from("board-boot-1"),
+            producer_boot_id: String::from("board-boot-1"),
             revision,
             produced_at_ms: revision * 10,
             carrier_state: fact_known(CARRIER_HELD),
@@ -222,7 +222,7 @@ mod tests {
             contract_major: EXPECTED_CONTRACT_MAJOR,
             contract_minor: EXPECTED_CONTRACT_MINOR,
             event_id: String::from(id),
-            host_boot_id: String::from("board-boot-1"),
+            producer_boot_id: String::from("board-boot-1"),
             occurred_at_ms: 5,
             caused_by_revision: 1,
             kind_code: 0,

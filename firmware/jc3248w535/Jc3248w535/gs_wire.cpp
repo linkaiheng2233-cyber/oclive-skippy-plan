@@ -16,7 +16,7 @@ constexpr size_t kMaxPayload = 4096;
 constexpr size_t kMaxFrame = kHeaderLen + kMaxPayload + kCrcLen;
 constexpr uint8_t kStateFormatVersion = 1;
 constexpr uint16_t kContractMajor = 0;
-constexpr uint16_t kContractMinor = 3;
+constexpr uint16_t kContractMinor = 4;
 
 // 消息类型：数值即协议，与 Rust 侧一致。
 enum MessageType : uint8_t {
@@ -379,6 +379,7 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 
 
 

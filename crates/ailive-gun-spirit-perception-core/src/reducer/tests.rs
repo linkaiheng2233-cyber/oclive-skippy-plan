@@ -52,7 +52,7 @@ fn profile() -> PerceptionProfile {
 
 fn observation(node: &str, sequence: u64, kind: SensorObservationKind) -> SensorObservation {
     SensorObservation {
-        contract_version: ContractVersion::V0_3,
+        contract_version: ContractVersion::V0_4,
         observation_id: ObservationId::try_new(format!("{node}-{sequence}")).unwrap(),
         node_uid: NodeUid::try_new(node).unwrap(),
         boot_id: BootId::try_new(format!("{node}-boot-1")).unwrap(),

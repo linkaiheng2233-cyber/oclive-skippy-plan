@@ -140,7 +140,7 @@ fn next_observation(kind: SensorObservationKind, millis: u64) -> Option<SensorOb
     let state = kernel();
     state.sequence = state.sequence.checked_add(1)?;
     Some(SensorObservation {
-        contract_version: ContractVersion::V0_3,
+        contract_version: ContractVersion::V0_4,
         observation_id: ObservationId::try_new(format_args_string(
             format_args!("{NODE_UID}:{}", state.sequence),
         ))
@@ -416,8 +416,8 @@ fn to_wire_state(state: &PerceptionState) -> Option<WireState> {
     }
     Some(WireState {
         contract_major: 0,
-        contract_minor: 3,
-        host_boot_id: String::from(state.host_boot_id.as_str()),
+        contract_minor: 4,
+        producer_boot_id: String::from(state.producer_boot_id.as_str()),
         revision: state.revision,
         produced_at_ms: state.produced_at_monotonic_ms,
         carrier_state: wire_fact(&state.carrier_state, carrier_code),
@@ -444,4 +444,6 @@ pub extern "C" fn gs_kernel_self_test() -> i32 {
     }
     i32::try_from(gs_kernel_state_revision()).unwrap_or(-4)
 }
+
+
 

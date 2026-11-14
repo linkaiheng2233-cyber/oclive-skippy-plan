@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "BootId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ContractVersion": {
+      "description": "感知契约的线版本。\n\n版本字符串只写在这里一处（`serde` 重命名）；不另设同值的 `pub const`，\n否则同一事实会有两份副本、可以各自漂移。\n\nv0.2 的变体**已被替换**而不是保留：保留它会让一条标着 `\"0.2\"` 的消息\n仍然解析通过，而它的载荷只能按v0.3的类型解释——等于对外宣称支持一个\n本仓并未实现的语义。v0.2 从未有过已部署的生产者（ESP32固件尚不存在，\n唯一生产者是同仓模拟器），因此不存在需要承接的兼容负担。",
+      "oneOf": [
+        {
+          "const": "0.3",
+          "description": "历史版本：字段名仍为 `host_boot_id`，仅保留以便解析旧载荷。",
+          "type": "string"
+        },
+        {
+          "const": "0.4",
+          "description": "v0.4：`host_boot_id` → `producer_boot_id`；新增 `magazine.seated` 与\n`PrimaryControlId::PreFeedLever`。",
+          "type": "string"
+        }
+      ]
+    },
+    "DeviceEventKind": {
+      "oneOf": [
+        {
+          "enum": [
+            "carrier.held_entered",
+            "carrier.held_exited",
+            "carrier.ready_entered",
+            "carrier.ready_exited",
+            "control.primary.engaged",
+            "control.primary.released"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "magazine.seated",
+          "description": "弹匣就位（换弹完成）。P0 只表达\"检测到就位\"，不做弹药计数。",
+          "type": "string"
+        }
+      ]
+    },
+    "EventId": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "$id": "https://oclive.dev/schemas/ailive.gun-spirit/device-event.v0.4.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "caused_by_perception_revision": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "contract_version": {
+      "$ref": "#/$defs/ContractVersion"
+    },
+    "event_id": {
+      "$ref": "#/$defs/EventId"
+    },
+    "kind": {
+      "$ref": "#/$defs/DeviceEventKind"
+    },
+    "occurred_at_monotonic_ms": {
+      "format": "uint64",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "producer_boot_id": {
+      "$ref": "#/$defs/BootId"
+    }
+  },
+  "required": [
+    "contract_version",
+    "event_id",
+    "producer_boot_id",
+    "occurred_at_monotonic_ms",
+    "caused_by_perception_revision",
+    "kind"
+  ],
+  "title": "A.I.Live Gun Spirit DeviceEvent v0.4",
+  "type": "object"
+}

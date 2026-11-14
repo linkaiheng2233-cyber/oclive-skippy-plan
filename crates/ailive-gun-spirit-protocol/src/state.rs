@@ -12,7 +12,7 @@
 //! u8  format_version = 1
 //! u16 contract_major
 //! u16 contract_minor
-//! 1+n host_boot_id (n 1..=128)
+//! 1+n producer_boot_id (n 1..=128)
 //! u64 revision
 //! u64 produced_at_monotonic_ms
 //! fact carrier_state
@@ -144,7 +144,7 @@ pub struct WireNodeHealth {
 pub struct WireState {
     pub contract_major: u16,
     pub contract_minor: u16,
-    pub host_boot_id: String,
+    pub producer_boot_id: String,
     pub revision: u64,
     pub produced_at_ms: u64,
     pub carrier_state: WireFact,
@@ -163,7 +163,7 @@ impl WireState {
         writer.u8(STATE_FORMAT_VERSION)?;
         writer.u16(self.contract_major)?;
         writer.u16(self.contract_minor)?;
-        writer.string(&self.host_boot_id, MAX_ID_LEN)?;
+        writer.string(&self.producer_boot_id, MAX_ID_LEN)?;
         writer.u64(self.revision)?;
         writer.u64(self.produced_at_ms)?;
         for fact in [
@@ -195,7 +195,7 @@ impl WireState {
         }
         let contract_major = reader.u16()?;
         let contract_minor = reader.u16()?;
-        let host_boot_id = String::from(reader.string(MAX_ID_LEN)?);
+        let producer_boot_id = String::from(reader.string(MAX_ID_LEN)?);
         let revision = reader.u64()?;
         let produced_at_ms = reader.u64()?;
         let carrier_state = WireFact::decode(&mut reader)?;
@@ -221,7 +221,7 @@ impl WireState {
         Ok(Self {
             contract_major,
             contract_minor,
-            host_boot_id,
+            producer_boot_id,
             revision,
             produced_at_ms,
             carrier_state,
@@ -254,7 +254,7 @@ mod tests {
         WireState {
             contract_major: 0,
             contract_minor: 3,
-            host_boot_id: String::from("board-boot-7"),
+            producer_boot_id: String::from("board-boot-7"),
             revision: 42,
             produced_at_ms: 12_345,
             carrier_state: known(CARRIER_HELD),
@@ -287,7 +287,7 @@ mod tests {
         let state = WireState {
             contract_major: 0,
             contract_minor: 3,
-            host_boot_id: String::from("board-000000-1"),
+            producer_boot_id: String::from("board-000000-1"),
             revision: 1,
             produced_at_ms: 0,
             carrier_state: WireFact::Unknown {
@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn state_rejects_oversize_boot_id() {
         let mut state = sample();
-        state.host_boot_id = "x".repeat(MAX_ID_LEN + 1);
+        state.producer_boot_id = "x".repeat(MAX_ID_LEN + 1);
         let mut buffer = [0u8; 2048];
         assert_eq!(state.encode(&mut buffer), Err(PayloadError::TooLong));
     }
