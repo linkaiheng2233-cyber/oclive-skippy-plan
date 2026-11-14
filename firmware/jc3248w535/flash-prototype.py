@@ -87,6 +87,8 @@ def main():
     operation.add_argument("--image", type=Path, help="Application .bin from build.ps1")
     operation.add_argument("--assets", type=Path,
                            help="Raw asset blob to write into the ffat region (0x410000)")
+    operation.add_argument("--assets-force", type=Path,
+                           help="Same as --assets but overwrite a non-empty asset region")
     operation.add_argument("--check", action="store_true", help="Check the board and backup")
     operation.add_argument("--factory", action="store_true", help="Boot the factory app again")
     args = parser.parse_args()
@@ -106,8 +108,11 @@ def main():
             raise ValueError("Expected an ESP32-S3 app image.")
 
     assets = None
-    if args.assets is not None:
-        assets = args.assets.read_bytes()
+    assets_force = False
+    asset_source = args.assets if args.assets is not None else args.assets_force
+    if asset_source is not None:
+        assets_force = args.assets_force is not None
+        assets = asset_source.read_bytes()
         if not 24 <= len(assets) <= FFAT_SIZE:
             raise ValueError("Asset blob size out of range.")
         if assets[0:4] != b"GSA1":
@@ -141,9 +146,9 @@ def main():
             esptool.reset_chip(esp, "no-reset-stub")
             return
 
-        if args.assets is not None:
-            if not matches(esp, FFAT_START, ERASED_SECTOR):
-                raise ValueError("ffat asset region is not erased; refusing to overwrite.")
+        if args.assets is not None or args.assets_force is not None:
+            if not assets_force and not matches(esp, FFAT_START, ERASED_SECTOR):
+                raise ValueError("ffat asset region is not erased; use --assets-force to overwrite.")
             esptool.write_flash(esp, [(FFAT_START, assets)], no_progress=True)
             esptool.verify_flash(esp, [(FFAT_START, assets)])
             print(f"Asset blob written to ffat region ({len(assets)} bytes).", flush=True)
@@ -171,3 +176,4 @@ if __name__ == "__main__":
         main()
     except (FatalError, OSError, ValueError) as error:
         sys.exit(str(error))
+
