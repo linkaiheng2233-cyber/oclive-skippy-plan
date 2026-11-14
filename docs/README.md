@@ -58,6 +58,8 @@
 | `LINUX_ARM64.md` | Zero 3W目标Linux镜像、服务和板端bring-up |
 | `LOCAL_3B_INFERENCE.md` | 3B及以下模型、角色上下文、速度/质量与训练进入条件 |
 | `CONFIG_REFERENCE.md` | 生成器/Host配置参考，不定义产品范围 |
+| `P0A_FIRMWARE_PLATFORM.md` | **板端运行平台设计**（板子的"操作系统"）：启动序列、任务模型、时钟、内存与存储、配置面、诊断、故障恢复、ABI 契约；状态 `CANDIDATE` |
+| `DISTRO_BASELINE.md` | **枪娘发行版基础**：四层组成与 SSOT、版本与兼容、包结构与校验、红线、MVP 路径；状态 `CANDIDATE` |
 | `P0A_SOFTWARE_DESIGN.md` | **P0-A 软件实现设计**：分层、任务与时钟、消息语义分阶段、降级与验收映射；状态 `CANDIDATE` |
 | `PROTOCOL_V1_DRAFT.md` | **S2 帧协议草案**（USB 与 Wi-Fi 同一语义）：帧格式/CRC、消息类型、会话与去重、按类型分派校验、标识符上限、错误处理；状态 `CANDIDATE` |
 
@@ -96,3 +98,4 @@
 - `ARMV7_VALIDATION.md`：旧Lyra/ARMv7回退路线的历史与兼容证据。
 
 这些文件若与项目基线、ADR或领域SSOT冲突，不具有覆盖权。
+
