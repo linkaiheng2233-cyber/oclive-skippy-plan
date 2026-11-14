@@ -146,7 +146,8 @@
 | `KSYNTH on|off` | 持续合成观测（台架） |
 | `KTICK` | 手动推进内核时间（触发 TTL） |
 | `KERNEL` | ABI 版本 + 自检 revision |
-| `WIRE on|off` | 切换帧协议 / ASCII |
+| `WIRE on\|off` | 切换帧协议 / ASCII |
+| `SETTINGS on\|off` | 打开/关闭屏幕设置层（无需触摸） |
 | `WIFI <ssid> <pass>` / `WIFI status` / `WIFI scan` / `WIFI forget` | Wi-Fi 管理 |
 
 **帧协议可观测**：`STATE`（每秒）、`EVENT`（边沿）、`PING/PONG`（往返/断线判定）。
@@ -226,4 +227,5 @@
 2. **看门狗策略**：只挂 UI，还是也监控 reducer/sensor 心跳？
 3. **版本标识方案**：构建期注入 git 哈希（需要 build.ps1 支持）是否值得？
 4. **coredump 启用**：读出来做什么（串口打印？Overlay？）
+
 

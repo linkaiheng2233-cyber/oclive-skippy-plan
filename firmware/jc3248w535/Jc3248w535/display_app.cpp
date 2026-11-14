@@ -22,6 +22,8 @@
 #include "imu.h"
 #include "settings_ui.h"
 #include "version.h"
+
+LV_FONT_DECLARE(lv_font_ui_16);
 #include "gs_wire.h"
 #ifdef GS_KERNEL_ENABLED
 #include "kernel_bridge.h"
@@ -239,7 +241,7 @@ void create_ui(lv_disp_t *display) {
     lv_obj_set_pos(name, 301, 76);
 
     mood_label = lv_label_create(screen);
-    text_style(mood_label, &lv_font_montserrat_28, 0xFFF5EF);
+    text_style(mood_label, &lv_font_ui_16, 0xFFF5EF);
     lv_obj_set_pos(mood_label, 299, 107);
 
     page_label = lv_label_create(screen);
@@ -248,6 +250,23 @@ void create_ui(lv_disp_t *display) {
 
     add_button(screen, LV_SYMBOL_LEFT "  Prev", 14, false);
     add_button(screen, "Next  " LV_SYMBOL_RIGHT, 248, true);
+
+    // 设置入口：右上角明确的"设置"按钮。**不做长按**（电容屏长按易误判），
+    // 也不用纯符号：符号在没有对应字形的字体下会变成方框，用户就找不到入口了。
+    lv_obj_t *gear = lv_obj_create(screen);
+    lv_obj_clear_flag(gear, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(gear, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(gear, 64, 40);
+    lv_obj_set_pos(gear, 404, 4);
+    lv_obj_set_style_radius(gear, 8, 0);
+    lv_obj_set_style_border_width(gear, 0, 0);
+    lv_obj_set_style_bg_color(gear, lv_color_hex(0x3A2F4E), 0);
+    lv_obj_add_event_cb(gear, on_settings_clicked, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t *gear_label = lv_label_create(gear);
+    lv_label_set_text(gear_label, "设置");
+    text_style(gear_label, &lv_font_ui_16, 0xF7F0FF);
+    lv_obj_center(gear_label);
+
     show_portrait(0);
 }
 
@@ -723,6 +742,9 @@ void loop() {
     }
     delay(5);
 }
+
+
+
 
 
 

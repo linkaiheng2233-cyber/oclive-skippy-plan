@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+LV_FONT_DECLARE(lv_font_ui_16);
+
 namespace gunspirit::settings_ui {
 namespace {
 
@@ -95,6 +97,8 @@ void on_close_clicked(lv_event_t *) {
 lv_obj_t *make_tab(lv_obj_t *parent, const char *text, int x, int index) {
     lv_obj_t *button = lv_obj_create(parent);
     lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+    // lv_obj_create 创建的对象**默认不可点击**，必须显式加标志，否则页签点了没反应。
+    lv_obj_add_flag(button, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_size(button, 150, 40);
     lv_obj_set_pos(button, x, 46);
     lv_obj_set_style_radius(button, 8, 0);
@@ -103,7 +107,7 @@ lv_obj_t *make_tab(lv_obj_t *parent, const char *text, int x, int index) {
                         reinterpret_cast<void *>(static_cast<intptr_t>(index)));
     lv_obj_t *label = lv_label_create(button);
     lv_label_set_text(label, text);
-    style_label(label, &lv_font_montserrat_20, 0x9C90B4);
+    style_label(label, &lv_font_ui_16, 0x9C90B4);
     lv_obj_center(label);
     tab_button[index] = button;
     tab_label[index] = label;
@@ -125,11 +129,13 @@ void create(lv_disp_t *display) {
     lv_obj_set_style_border_width(root, 0, 0);
     lv_obj_set_style_bg_color(root, lv_color_hex(0x151022), 0);
     lv_obj_set_style_pad_all(root, 0, 0);
+    // 吸收遮罩背景上的触摸，避免点穿到底下的 Prev/Next 按钮。
+    lv_obj_add_flag(root, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(root, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_t *title = lv_label_create(root);
     lv_label_set_text(title, "设置");
-    style_label(title, &lv_font_montserrat_28, 0xFFF5EF);
+    style_label(title, &lv_font_ui_16, 0xFFF5EF);
     lv_obj_set_pos(title, 16, 10);
 
     make_tab(root, "连接", 16, kTabConnect);
@@ -137,6 +143,7 @@ void create(lv_disp_t *display) {
 
     lv_obj_t *close = lv_obj_create(root);
     lv_obj_clear_flag(close, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(close, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_size(close, 110, 40);
     lv_obj_set_pos(close, 356, 46);
     lv_obj_set_style_radius(close, 8, 0);
@@ -145,11 +152,11 @@ void create(lv_disp_t *display) {
     lv_obj_add_event_cb(close, on_close_clicked, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *close_label = lv_label_create(close);
     lv_label_set_text(close_label, "返回");
-    style_label(close_label, &lv_font_montserrat_20, 0xF7F0FF);
+    style_label(close_label, &lv_font_ui_16, 0xF7F0FF);
     lv_obj_center(close_label);
 
     content = lv_label_create(root);
-    style_label(content, &lv_font_montserrat_14, 0xE6DDF5);
+    style_label(content, &lv_font_ui_16, 0xE6DDF5);
     lv_obj_set_pos(content, 16, 100);
     lv_label_set_text(content, "");
 
@@ -175,6 +182,8 @@ void hide() {
     if (root == nullptr) {
         return;
     }
+    // 吸收遮罩背景上的触摸，避免点穿到底下的 Prev/Next 按钮。
+    lv_obj_add_flag(root, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(root, LV_OBJ_FLAG_HIDDEN);
     shown = false;
 }
@@ -202,4 +211,8 @@ void tick(unsigned long now_ms) {
 }
 
 }  // namespace gunspirit::settings_ui
+
+
+
+
 
