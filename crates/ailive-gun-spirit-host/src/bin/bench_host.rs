@@ -21,8 +21,10 @@ use ailive_gun_spirit_protocol::payload::{Expression, Hello};
 use ailive_gun_spirit_protocol::state::{WireFact, WireNodeHealth, WireState};
 use ailive_gun_spirit_protocol::{decode, encode, MessageType};
 
-const CONTRACT_MAJOR: u16 = 0;
-const CONTRACT_MINOR: u16 = 3;
+// 单一定义源：契约版本只从库里的常量取，避免二进制与库各维护一份而漂移。
+use ailive_gun_spirit_host::bench::{
+    EXPECTED_CONTRACT_MAJOR as CONTRACT_MAJOR, EXPECTED_CONTRACT_MINOR as CONTRACT_MINOR,
+};
 const BOARD_BOOT: &str = "board-boot-1";
 
 fn frame(message_type: MessageType, payload_bytes: &[u8]) -> Vec<u8> {

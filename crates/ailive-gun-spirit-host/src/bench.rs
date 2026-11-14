@@ -18,7 +18,7 @@ use ailive_gun_spirit_protocol::state::WireState;
 /// 期望的契约主版本（v0.3 → 0）。
 pub const EXPECTED_CONTRACT_MAJOR: u16 = 0;
 /// 期望的契约次版本（v0.3 → 3）。
-pub const EXPECTED_CONTRACT_MINOR: u16 = 3;
+pub const EXPECTED_CONTRACT_MINOR: u16 = 4;
 /// 记住的 `event_id` 上限，防止无限增长。
 pub const MAX_REMEMBERED_EVENTS: usize = 256;
 
