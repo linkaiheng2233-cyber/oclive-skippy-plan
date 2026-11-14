@@ -444,3 +444,24 @@ bench: tcp 192.168.137.54:47900
 
 
 
+
+### 6.5.6 `magazine.seated` 端到端（MEASURED，2026-11-14）
+
+契约 v0.4 新增值在真实链路验证通过：
+
+```
+bench: tcp 192.168.137.54:47900
+  event kind=6 id=board-0684C7-1-evt-1
+  hello=1 states=9 events_new=1 events_dup=0
+```
+
+链路：串口 `MAGSEAT` 布防（单次，不循环）→ Wi-Fi 客户端接入 → HELLO 握手 →
+板端 `gs_kernel_encode_event`（protocol crate 同一份编码器）→ EVENT 帧 → 台架解码。
+
+**过程中发现并修掉三个真缺陷**：
+
+1. 命令处理函数的字符串替换**静默失败**，导致"立即发送"与"布防发送"两份实现并存——事件被发到串口；
+2. 板端残留**半开 TCP 连接**占住会话，新客户端接入后收不到 HELLO 响应。已加 15 s 客户端空闲超时；
+3. **契约版本常量三处重复**（host 库 / host 二进制 / 固件）：二进制仍发 0.3、板端要求 0.4，板端**静默 NACK**，台架表现为 `hello=0`。已消除二进制本地副本（统一从库导入），新增 `scripts/check-contract-parity.ps1` 并接入门禁。
+
+**IMU 到货后**：把"串口布防"换成霍尔传感器边沿即可，`gs_kernel_encode_event` 与台架侧无需改动。
