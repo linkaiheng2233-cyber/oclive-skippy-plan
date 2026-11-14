@@ -326,26 +326,11 @@ void handle_command(const char *command) {
     // 弹匣就位：**单次**事件，用于验证 v0.4 新增的 magazine.seated 链路。
     // 不做循环合成——持续伪造传感器边沿会把台架行为混进产品路径。
     if (strcmp(command, "MAGSEAT") == 0) {
-        static uint64_t magazine_sequence = 0;
-        uint8_t payload[192];
-        char boot_id[32];
-        snprintf(boot_id, sizeof(boot_id), "board-%02X%02X%02X-1",
-                 static_cast<unsigned>(ESP.getEfuseMac() >> 32 & 0xFF),
-                 static_cast<unsigned>(ESP.getEfuseMac() >> 24 & 0xFF),
-                 static_cast<unsigned>(ESP.getEfuseMac() >> 16 & 0xFF));
-        ++magazine_sequence;
-        const int32_t written = gs_kernel_encode_event(
-            6 /* magazine.seated */, magazine_sequence,
-            reinterpret_cast<const uint8_t *>(boot_id), strlen(boot_id), millis(), payload,
-            sizeof(payload));
-        if (written <= 0) {
-            Serial.printf("MAGSEAT ERR encode=%ld\n", static_cast<long>(written));
-            return;
-        }
-        const bool sent = gunspirit::wire::publish_event(payload, static_cast<size_t>(written));
-        Serial.printf("MAGSEAT seq=%llu len=%ld sent=%d\n",
-                      static_cast<unsigned long long>(magazine_sequence),
-                      static_cast<long>(written), sent ? 1 : 0);
+        magazine_pending = true;
+        Serial.printf("MAGSEAT armed (wire=%d socket=%d peer=%d)\n",
+                      gunspirit::wire::active() ? 1 : 0,
+                      gunspirit::wire::using_socket() ? 1 : 0,
+                      gunspirit::wire::peer_seen() ? 1 : 0);
         return;
     }
 
