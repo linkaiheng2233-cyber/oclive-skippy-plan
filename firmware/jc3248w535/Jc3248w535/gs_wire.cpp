@@ -334,6 +334,10 @@ bool active() {
     return s_active;
 }
 
+bool peer_seen() {
+    return s_peer_seen;
+}
+
 bool publish_event(const uint8_t *payload, size_t length) {
     return send_frame(kEvent, payload, length);
 }
@@ -383,6 +387,7 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 
 
 

@@ -803,7 +803,7 @@ void loop() {
     gunspirit::wifi_link::pump();
 #endif
     // 弹匣就位：布防后等帧会话就绪再发一次；发完清除，不重复。
-    if (magazine_pending && gunspirit::wire::active()) {
+    if (magazine_pending && gunspirit::wire::active() && gunspirit::wire::peer_seen()) {
         uint8_t payload[192];
         char boot_id[32];
         snprintf(boot_id, sizeof(boot_id), "board-%02X%02X%02X-1",
@@ -829,6 +829,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 
