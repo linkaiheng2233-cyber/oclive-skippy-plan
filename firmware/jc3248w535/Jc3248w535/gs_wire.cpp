@@ -334,6 +334,10 @@ bool active() {
     return s_active;
 }
 
+bool using_socket() {
+    return s_writer != nullptr;
+}
+
 bool peer_seen() {
     return s_peer_seen;
 }
@@ -387,6 +391,7 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 
 
 

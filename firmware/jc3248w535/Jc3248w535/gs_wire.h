@@ -19,6 +19,9 @@ void end();
 /// 当前是否处于帧协议模式。
 bool active();
 
+/// 帧出口当前是否指向 socket（网络客户端）而不是串口。
+bool using_socket();
+
 /// 对端是否已完成 HELLO 握手（事件必须等握手后再发，否则主机按 HandshakeRequired 拒绝）。
 bool peer_seen();
 
@@ -45,6 +48,7 @@ using FrameWriter = size_t (*)(const uint8_t *data, size_t length);
 void set_frame_writer(FrameWriter writer);
 
 }  // namespace gunspirit::wire
+
 
 
 

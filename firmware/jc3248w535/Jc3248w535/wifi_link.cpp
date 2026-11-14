@@ -25,6 +25,8 @@ String s_ssid;
 String s_password;
 bool s_has_credentials = false;
 bool s_writer_socket = false;
+constexpr uint32_t kClientIdleTimeoutMs = 15000;
+uint32_t s_last_client_activity_ms = 0;
 bool s_started = false;
 uint32_t s_last_attempt_ms = 0;
 uint32_t s_last_announce_ms = 0;
@@ -185,6 +187,7 @@ void pump() {
             s_udp.flush();
             wire::set_frame_writer(socket_writer);
             s_writer_socket = true;
+            s_last_client_activity_ms = now;
             // 网络客户端一律按帧协议服务：ASC信号只用于串口台架调试。
             wire::begin();
             Serial.printf("WIFI client %s\n", s_client.remoteIP().toString().c_str());
@@ -193,12 +196,22 @@ void pump() {
     }
 
     // 把 socket 收到的字节喂进协议解析器（与串口同一套）。
+    // 空闲超时：半开连接（对端已退出）会占住会话、挡住重连，必须清掉。
+    if (now - s_last_client_activity_ms > kClientIdleTimeoutMs) {
+        Serial.println("WIFI client idle timeout");
+        s_client.stop();
+        s_writer_socket = false;
+        wire::set_frame_writer(nullptr);
+        return;
+    }
+
     for (int budget = 256; budget > 0 && s_client.available() > 0; --budget) {
         const int byte = s_client.read();
         if (byte < 0) {
             break;
         }
         wire::feed(static_cast<uint8_t>(byte));
+        s_last_client_activity_ms = now;
     }
 
 
@@ -280,6 +293,7 @@ const char *ip() {
 }
 
 }  // namespace gunspirit::wifi_link
+
 
 
 
