@@ -13,7 +13,7 @@
 //! 1+n producer_boot_id (n 1..=128)
 //! u64 occurred_at_monotonic_ms
 //! u64 caused_by_perception_revision
-//! u8  kind_code (0..=5)
+//! u8  kind_code (0..=6)
 //! ```
 
 use alloc::string::String;
@@ -33,6 +33,8 @@ pub const KIND_CARRIER_READY_ENTERED: u8 = 2;
 pub const KIND_CARRIER_READY_EXITED: u8 = 3;
 pub const KIND_CONTROL_PRIMARY_ENGAGED: u8 = 4;
 pub const KIND_CONTROL_PRIMARY_RELEASED: u8 = 5;
+/// 弹匣就位（v0.4 新增）。只表达"检测到就位"，不含弹药数量。
+pub const KIND_MAGAZINE_SEATED: u8 = 6;
 
 /// 事件线格式。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,7 +52,7 @@ impl WireEvent {
     /// `kind_code` 是否为已定义值。
     #[must_use]
     pub fn is_known_kind(code: u8) -> bool {
-        code <= KIND_CONTROL_PRIMARY_RELEASED
+        code <= KIND_MAGAZINE_SEATED
     }
 
     pub fn encode(&self, output: &mut [u8]) -> Result<usize, PayloadError> {
@@ -144,7 +146,7 @@ mod tests {
     #[test]
     fn event_rejects_unknown_kind() {
         let mut event = sample();
-        event.kind_code = 6;
+        event.kind_code = 7;
         let mut buffer = [0u8; 256];
         assert_eq!(event.encode(&mut buffer), Err(PayloadError::InvalidValue));
 
@@ -152,7 +154,7 @@ mod tests {
         let good = sample();
         let mut encoded = [0u8; 256];
         let written = good.encode(&mut encoded).expect("encode");
-        encoded[written - 1] = 6;
+        encoded[written - 1] = 7;
         assert_eq!(
             WireEvent::decode(&encoded[..written]),
             Err(PayloadError::InvalidValue)

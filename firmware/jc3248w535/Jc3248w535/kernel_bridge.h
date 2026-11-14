@@ -26,4 +26,10 @@ int32_t gs_kernel_tick(uint64_t millis);
 
 // 把内核快照编码成协议 STATE 载荷；返回字节数，负数表示错误。
 int32_t gs_kernel_encode_state(uint8_t *output, size_t capacity);
+
+// 把一条 DeviceEvent 编码成协议 EVENT 载荷（kind_code 见协议常量表）。
+int32_t gs_kernel_encode_event(uint8_t kind_code, uint64_t sequence, const uint8_t *producer_boot_id,
+                               size_t producer_boot_id_len, uint64_t occurred_at_ms, uint8_t *output,
+                               size_t capacity);
 }
+

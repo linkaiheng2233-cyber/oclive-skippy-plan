@@ -38,7 +38,7 @@ use ailive_gun_spirit_protocol::state::{
 
 /// ABI 版本：固件侧用它确认头文件与库一致。
 #[no_mangle]
-pub static GS_KERNEL_ABI_VERSION: u32 = 2;
+pub static GS_KERNEL_ABI_VERSION: u32 = 3;
 
 const NODE_UID: &str = "gun-node";
 const HOST_BOOT: &str = "board-kernel-1";
@@ -430,7 +430,58 @@ fn to_wire_state(state: &PerceptionState) -> Option<WireState> {
     })
 }
 
-/// 自检：跑一遍"前握接触 → 后握接触"，返回推进后的 revision；失败返回负数。
+
+/// 把一条 `DeviceEvent` 编码成协议 `EVENT` 载荷。
+///
+/// 板端只做"检测到边沿 → 封装事件"，不做语义判定；`caused_by_revision`
+/// 取内核当前 revision（revision 为 0 时取 1，因为契约禁止 0）。
+/// 返回写入字节数；负数表示错误。
+#[no_mangle]
+pub extern "C" fn gs_kernel_encode_event(
+    kind_code: u8,
+    sequence: u64,
+    producer_boot_id: *const u8,
+    producer_boot_id_len: usize,
+    occurred_at_ms: u64,
+    output: *mut u8,
+    capacity: usize,
+) -> i32 {
+    if output.is_null() || capacity == 0 {
+        return -1;
+    }
+    let boot_id = if producer_boot_id.is_null() || producer_boot_id_len == 0 {
+        None
+    } else {
+        // SAFETY: 调用方保证指针与长度有效。
+        let bytes = unsafe { core::slice::from_raw_parts(producer_boot_id, producer_boot_id_len) };
+        core::str::from_utf8(bytes).ok()
+    };
+    let Some(boot_id) = boot_id else {
+        return -2;
+    };
+    let revision = kernel()
+        .reducer
+        .as_ref()
+        .map(|reducer| reducer.current_state().revision)
+        .unwrap_or(0);
+    let caused_by = if revision == 0 { 1 } else { revision };
+    let event_id = format_args_string(format_args!("{boot_id}-evt-{sequence}"));
+    let event = ailive_gun_spirit_protocol::event::WireEvent {
+        contract_major: 0,
+        contract_minor: 4,
+        event_id,
+        producer_boot_id: String::from(boot_id),
+        occurred_at_ms,
+        caused_by_revision: caused_by,
+        kind_code,
+    };
+    // SAFETY: 调用方保证缓冲区有效且长度为 capacity。
+    let buffer = unsafe { core::slice::from_raw_parts_mut(output, capacity) };
+    match event.encode(buffer) {
+        Ok(written) => i32::try_from(written).unwrap_or(-4),
+        Err(_) => -3,
+    }
+}/// 自检：跑一遍"前握接触 → 后握接触"，返回推进后的 revision；失败返回负数。
 #[no_mangle]
 pub extern "C" fn gs_kernel_self_test() -> i32 {
     if gs_kernel_init() != 0 {
@@ -444,6 +495,7 @@ pub extern "C" fn gs_kernel_self_test() -> i32 {
     }
     i32::try_from(gs_kernel_state_revision()).unwrap_or(-4)
 }
+
 
 
 

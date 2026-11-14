@@ -140,6 +140,9 @@ lv_obj_t *page_label;
 bool synth_on = false;
 uint8_t synth_grip_contact[2] = {1, 1};
 uint32_t synth_last_ms = 0;
+// 弹匣就位：串口布防一次，等帧会话建立后由主循环发出（单次，不循环）。
+bool magazine_pending = false;
+uint64_t magazine_sequence = 0;
 #endif
 size_t current_portrait = 0;
 uint32_t touch_sequence = 0;
@@ -320,6 +323,32 @@ void handle_command(const char *command) {
     }
 #endif
 #ifdef GS_KERNEL_ENABLED
+    // 弹匣就位：**单次**事件，用于验证 v0.4 新增的 magazine.seated 链路。
+    // 不做循环合成——持续伪造传感器边沿会把台架行为混进产品路径。
+    if (strcmp(command, "MAGSEAT") == 0) {
+        static uint64_t magazine_sequence = 0;
+        uint8_t payload[192];
+        char boot_id[32];
+        snprintf(boot_id, sizeof(boot_id), "board-%02X%02X%02X-1",
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 32 & 0xFF),
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 24 & 0xFF),
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 16 & 0xFF));
+        ++magazine_sequence;
+        const int32_t written = gs_kernel_encode_event(
+            6 /* magazine.seated */, magazine_sequence,
+            reinterpret_cast<const uint8_t *>(boot_id), strlen(boot_id), millis(), payload,
+            sizeof(payload));
+        if (written <= 0) {
+            Serial.printf("MAGSEAT ERR encode=%ld\n", static_cast<long>(written));
+            return;
+        }
+        const bool sent = gunspirit::wire::publish_event(payload, static_cast<size_t>(written));
+        Serial.printf("MAGSEAT seq=%llu len=%ld sent=%d\n",
+                      static_cast<unsigned long long>(magazine_sequence),
+                      static_cast<long>(written), sent ? 1 : 0);
+        return;
+    }
+
     // 无 IMU 时验证内核闭环：KGRIP <front|rear> <engaged|released>
     if (strncmp(command, "KGRIP ", 6) == 0) {
         const char *argument = command + 6;
@@ -773,13 +802,35 @@ void loop() {
 #ifdef GS_WIFI_ENABLED
     gunspirit::wifi_link::pump();
 #endif
-    gunspirit::wire::pump(millis());
+    // 弹匣就位：布防后等帧会话就绪再发一次；发完清除，不重复。
+    if (magazine_pending && gunspirit::wire::active()) {
+        uint8_t payload[192];
+        char boot_id[32];
+        snprintf(boot_id, sizeof(boot_id), "board-%02X%02X%02X-1",
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 32 & 0xFF),
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 24 & 0xFF),
+                 static_cast<unsigned>(ESP.getEfuseMac() >> 16 & 0xFF));
+        ++magazine_sequence;
+        const int32_t written = gs_kernel_encode_event(
+            6 /* magazine.seated */, magazine_sequence,
+            reinterpret_cast<const uint8_t *>(boot_id), strlen(boot_id), millis(), payload,
+            sizeof(payload));
+        if (written > 0 &&
+            gunspirit::wire::publish_event(payload, static_cast<size_t>(written))) {
+            magazine_pending = false;
+            Serial.printf("MAGSEAT sent seq=%llu len=%ld\n",
+                          static_cast<unsigned long long>(magazine_sequence),
+                          static_cast<long>(written));
+        }
+    }    gunspirit::wire::pump(millis());
     TouchEvent touch;
     if (touch_events && xQueueReceive(touch_events, &touch, 0) == pdTRUE && Serial) {
         Serial.printf("TOUCH %" PRIu32 "\nMOOD %s\n", touch.sequence, portraits[touch.portrait].id);
     }
     delay(5);
 }
+
+
 
 
 

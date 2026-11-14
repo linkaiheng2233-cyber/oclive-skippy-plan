@@ -128,7 +128,13 @@ fn feed(session: &mut Session, buffer: &[u8]) -> usize {
                         .and_then(|state| session.on_state(state)),
                     MessageType::Event => WireEvent::decode(frame_view.payload)
                         .map_err(Rejection::from)
-                        .and_then(|event| session.on_event(&event).map(|_| ())),
+                        .and_then(|event| {
+                            let result = session.on_event(&event).map(|_| ());
+                            if matches!(result, Ok(())) {
+                                println!("  event kind={} id={}", event.kind_code, event.event_id);
+                            }
+                            result
+                        }),
                     _ => Ok(()),
                 };
                 if let Err(reason) = outcome {

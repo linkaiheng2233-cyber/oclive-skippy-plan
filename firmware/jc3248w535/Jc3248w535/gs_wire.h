@@ -19,6 +19,9 @@ void end();
 /// 当前是否处于帧协议模式。
 bool active();
 
+/// 发送一条 EVENT 载荷（板端封装好的 DeviceEvent 字节）。
+bool publish_event(const uint8_t *payload, size_t length);
+
 /// 统计：已分发的合法帧总数。
 uint32_t frames_received();
 
@@ -39,5 +42,6 @@ using FrameWriter = size_t (*)(const uint8_t *data, size_t length);
 void set_frame_writer(FrameWriter writer);
 
 }  // namespace gunspirit::wire
+
 
 
