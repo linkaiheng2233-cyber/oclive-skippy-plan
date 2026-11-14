@@ -37,13 +37,16 @@
 | 项目 | 当前事实 | 证据状态 |
 |---|---|---|
 | 仓库 | 独立本地仓`oclive-四季宝器灵`，**四** crate Rust workspace（contracts / perception-core / protocol / host）；`firmware/kernel-shim` 在 workspace 之外（需要 unsafe） | `MEASURED`（代码/门禁） |
-| **当前基线** | **`baseline/GS-P0-BL-2026-11-14`** | **`MEASURED`（2026-11-14）**：`./scripts/verify.ps1` 全量 **PASS**（fmt、边界、clippy、全测试、doctest、Schema 零漂移、no_std 三场景对拍、**cargo audit**）。审计对 `GS-DEP-001` 使用**有到期日（2026-12-14）的例外**，见 `.cargo/audit.toml` |
+| **当前基线** | **`baseline/GS-P0-BL-2026-11-14b`**（2026-11-14 晚铸定，提交 `HEAD` 见 tag） | **`MEASURED`**：`./scripts/verify.ps1 -SkipAudit` **PASS**（fmt 4 包、workspace 边界、distro layout、**契约版本一致性**、clippy、all-targets、doctest、Schema 零漂移、no_std 三场景对拍）。**`cargo audit` 未验证：RustSec advisory 数据库拉取失败（网络环境问题，非回归）**，例外配置仍为 `GS-DEP-001`（到期 2026-12-14） |
 | **枪侧形态（P0-A 主线）** | 晶彩 JC3248W535 带壳一体板，ESP32-S3 承担板上感知和即时显示，Windows PC 本地运行 OCLive。首个外设是固定侧 IMU，握持随装配验证加入。 | **`MEASURED`**：点屏/触摸/USB 表情下发/**双向联调**（PC→屏、屏→PC 触屏回执）通过；**立绘已外置到 ffat 资产区**（固件 1,504→579 KB，实机加载 946,400 B 入 PSRAM）。**IMU 未到货、板上感知待验**。 [实机工作表](test-worksheets/01-硬件到货清单.md) · [体积与内存实测](test-worksheets/runs/2026-11-13-firmware-size-budget.md) |
-| **链路（P0-A）** | USB-C 供电和调试，后续 Wi-Fi STA 连接 PC。 | 台架串口命令已实测；**帧协议 v1 已实现为独立 crate**（分帧/CRC/类型校验，10 项测试）。**发现流程、射频共存与真实延迟待实测**。 [ADR-069](DECISIONS.md#adr-069p0-a-由-esp32-s3-运行感知内核) · [验证计划](P0A_VALIDATION_PLAN.md) |
+| **链路（P0-A）** | USB-C 烧录/调试；**Wi-Fi STA 已作为常规联机通道**（NVS 凭据、TCP 服务端、UDP 主动广播发现、15 s 空闲超时） | **`MEASURED`（2026-11-14）**：纯广播发现 `bench --discover` 自动连上；帧协议会话 `hello=1 states=9`；`magazine.seated` 事件端到端 `event kind=6`。**射频共存、真实延迟与丢包统计待实测**。 [P0A_SOFTWARE_DESIGN §6.5](P0A_SOFTWARE_DESIGN.md) |
 | **娱乐后端** | 主机侧打靶/靶场（ADR-066）：**G0 = 扣扳机 → 主机画面反馈**（无瞄准、无相机） | `DECIDED`（方向）；**未实现** |
 | **感知内核节点模型** | **已泛化**（2026-10-12，ADR-067）：`PerceptionProfile` 为「节点 → 能力集」映射，`NodeRole` 删除，单节点可声明全部能力。**单节点形态现在可以构造 profile** | `MEASURED`（自动测试）；`GS-ARCH-001` **已关闭** |
-| **契约扩展能力** | **v0.3 为当前基线**（2026-10-12）：`GripContact` 加判别字段、`AngularRateSample` 独立指向流、`ContractVersion::V0_2` 被替换（v0.2 消息现被拒绝）。**仍缺**：`NodeHello` 版本/能力协商实现、`AssetRef`/表达侧类型 | `MEASURED`（自动测试 + Schema 零漂移门）；`GS-CONTRACT-004` 范围缩小 |
+| **契约扩展能力** | **v0.4 为当前基线**（2026-11-14，ADR-072）：`host_boot_id` → `producer_boot_id`、新增 `magazine.seated` 事件与 `PrimaryControlId::PreFeedLever`；v0.3 保留仅用于识别历史载荷。**仍缺**：`NodeHello` 能力协商实现、`AssetRef`/表达侧类型 | `MEASURED`（自动测试 + Schema 零漂移门 + **契约版本一致性门禁** `check-contract-parity.ps1`）；`GS-CONTRACT-004` 范围缩小 |
 | 软件闭环 | Observation→Perception→DeviceEvent→typed sensor request→RoleCue→ScreenViewModel桌面半闭环可重复运行 | `MEASURED`（自动测试） |
+| **板端运行平台** | 启动序列、任务模型、时钟、内存/存储、诊断命令、故障降级、C++↔Rust ABI 契约 | `MEASURED`（ABI 3；STATE/EVENT 均由 protocol crate 编码；详见 [P0A_FIRMWARE_PLATFORM](P0A_FIRMWARE_PLATFORM.md)） |
+| **屏幕 OS** | 角色主屏 + 设置层（连接页只读、诊断页）；中文字库为 SimHei 子集 | `MEASURED`（触摸四事件全通；见 [SCREEN_OS](SCREEN_OS.md) §12） |
+| **发行版（内容层）** | 规范 + 示例包 + 校验器 + 门禁；场景规范 v1 与加载器 | `MEASURED`（`check-distro` 96 项、场景加载器 10 项测试、PASS） |
 | OCLive边界 | 兄弟仓提供类型化sensor origin；本仓只通过窄适配器接入 | `DECIDED + MEASURED` |
 | OCLive真实调用落地 | 接口与窄适配器保留；跨仓真实桌面接入暂缓，等待OCLive内核梳理完成 | `PAUSED_BY_OWNER` |
 | 主板 | Orange Pi Zero 3W / A733（A76+A55） | `MEASURED`：主机名`orangepizero3w`、Armbian 26.8.1 trixie（Debian 13.6）、内核 6.6.98-vendor-sun60iw2、DTB `sun60i-a733-orangepi-zero3w`；**RAM = 5,844 MiB（6 GB 属实）**、8 核 = 6×A55+2×A76、最高 1,794 MHz（2026-09-29 核验，`GS-HW-004` 大部分关闭，仅剩屏幕型号与环境温度） |
@@ -165,4 +168,5 @@ PNG/HUD 属于 P0。语音、相机、Live2D、余弹和更多节点不是 P0 �
 4. **`USB-C DP Alt → 主动式 DP→HDMI` 验证**：按 ADR-064 决定 ② 执行（30–80 元），它是 P0-B 的既定路线，但**已不在关键路径上**。
 
 `test-worksheets/01-硬件到货清单.md`的逐件身份核验仍未完成，需在下一轮现场一并补齐；两个XIAO节点、FSR/IMU与节点电池尚未进入测试（均属 P0-B）。OCLive跨仓真实调用保持契约冻结，不作为当前开发的阻塞项，直到项目所有者完成OCLive内核梳理后重新开放。
+
 

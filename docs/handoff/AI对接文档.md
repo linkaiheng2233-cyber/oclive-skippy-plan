@@ -4,20 +4,20 @@
 
 **更新规则**　开工先核对 §1 的仓库状态与 §5 的检查点。每次实质推进后更新 §1、对应检查点及 §6 最新一行。先把新技术决定或实测写入对应来源，再回填此处的摘要和链接。收工可直接使用 §11 的模板。
 
-**最后核对**　2026-11-13 20:41（北京时间）。
+**最后核对**　2026-11-14 19:40（北京时间）。
 
 ## 1. 状态快照
 
 | 项目 | 最近核对结果 |
 | --- | --- |
 | 仓库 | `E:\OCLive\oclive-四季宝器灵`，远端 `linkaiheng2233-cyber/oclive-skippy-plan`。相邻 OCLive 仓为 `E:\OCLive\oclivenewnew`。 |
-| 分支与提交 | 本地 `docs/personal-document-archive-20261030`，核对基点 `1145585`；相对 `origin/main` `5417492` **领先 17、落后 0**。远端只读查询未返回同名分支。 |
-| 基线 tag | **`baseline/GS-P0-BL-2026-11-14`**（2026-11-14 铸定）。此前为 `baseline/GS-P0-BL-2026-09-23`。 [基线记录](../PROJECT_BASELINE.md) |
-| 工程门禁 | **完整门禁 PASS（含 `cargo audit`）**：fmt、workspace 边界（4 members）、Clippy、all-targets、doctest、Schema 零漂移、no_std 双配置对拍、审计。审计对 `GS-DEP-001` 用**到期日 2026-12-14** 的例外（`.cargo/audit.toml`）；另有 3 条 allowed 警告。 |
+| 分支与提交 | 本地 `docs/personal-document-archive-20261030`，核对基点 `7a5117e`；相对 `origin/main` **领先 96、落后 0**（全部本地未推）。 |
+| 基线 tag | **`baseline/GS-P0-BL-2026-11-14b`**（2026-11-14 晚铸定，含契约 v0.4 / M1–M5 / 屏幕 OS / 发行版 MVP）。此前为 `baseline/GS-P0-BL-2026-11-14`。 [基线记录](../PROJECT_BASELINE.md) |
+| 工程门禁 | **`./scripts/verify.ps1 -SkipAudit` PASS**：fmt（含 protocol）、workspace 边界、distro layout、**契约版本一致性**、Clippy、all-targets、doctest、Schema 零漂移（v0.4）、no_std 双配置对拍。**`cargo audit` 因网络拉不到 advisory 数据库而未执行**（环境问题，例外仍是 `GS-DEP-001`，到期 2026-12-14）。 |
 | **no_std 能力** | **`contracts` 与 `perception-core` 可在 `no_std` + `alloc` 下编译**；对拍已覆盖 **default(9 帧)/repeat(11 帧)/stale(6 帧)** 三场景、两种配置，sha256 全一致；并已**脚本化挂入 `verify.ps1`**（`scripts/check-nostd-parity.ps1`）。CP1 **完整通过**。 |
 | 开放审计项 | `GS-DEP-001` / `RUSTSEC-2026-0459`。当前 Windows Host 依赖链经相邻仓 `oclive_sqlx`、`sqlx-sqlite 0.8.6` 引入 bundled `libsqlite3-sys 0.30.1`，修复路径见 §4。 [技术债台账](../TECHNICAL_DEBT.md#2-当前台账) · [RustSec 公告](https://rustsec.org/advisories/RUSTSEC-2026-0459.html) |
 | 板卡 | **双向联调已通过（2026-11-13 晚）**：只读校验与备份一致；`app1` 图库固件写入回读校验通过并已选中；`PING`/`STATE`/`STEP` 全 `OK`；触屏 `Next,Next,Prev` 回传 `TOUCH 1..3` 与对应 `MOOD`；验收脚本退出码 0。**当前板上运行 `app1`**，出厂 `app0` 完好可切回。 [到货与实机记录](../test-worksheets/01-硬件到货清单.md#p0-a-双向联调验收2026-11-13-21582205measured) |
-| 阶段 | P0-A 是当前主线。板上共享感知内核、USB 状态闭环、外接 IMU 和 Wi-Fi 会话均待验证。固定角布局、后握薄套和电池位置是设计候选。P0-B 保留后置。 [实施路线](../ROADMAP.md) |
+| 阶段 | P0-A 主线：**感知内核已链接上板并由内核驱动 STATE；Wi-Fi 自动发现与会话已实测；契约 v0.4 已落地**。剩余硬件卡点：IMU 到货（物流中）→ 真实姿态；发射器选型（20 号后）→ 支架与装配。P0-B 保留后置。 [实施路线](../ROADMAP.md) |
 
 接手时可用 `git status --short --branch`、`git rev-parse --short HEAD` 和 `git rev-list --left-right --count origin/main...HEAD` 复核。最后一条按「落后、领先」输出，对比的是本地记录的远端引用。
 
@@ -127,6 +127,7 @@
 ```
 
 给 DeepSeek 的开场可以直接复制「请按 §1 对齐当前版本，先推进 §5 的 CP1 桌面对拍。完成后按 §11 回填实际改动、验证结果、证据和下一步。缺少本机源码或实物数据时，列出所需的最小文件或现场记录。」项目历史与早期讨论见 [11 月 13 日一次性交接稿](2026-11-13-p0a-deepseek.md)。
+
 
 
 
