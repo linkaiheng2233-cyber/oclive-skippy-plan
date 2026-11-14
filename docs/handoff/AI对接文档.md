@@ -4,7 +4,7 @@
 
 **更新规则**　开工先核对 §1 的仓库状态与 §5 的检查点。每次实质推进后更新 §1、对应检查点及 §6 最新一行。先把新技术决定或实测写入对应来源，再回填此处的摘要和链接。收工可直接使用 §11 的模板。
 
-**最后核对**　2026-11-14 19:40（北京时间）。
+**最后核对**　2026-11-14 20:55（北京时间）。**当前暂停**：等待所有者复核 ADR-073（三块分离）；下一步 `S1 GameSignal`。IMU 未到货。
 
 ## 1. 状态快照
 
@@ -61,6 +61,7 @@
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- |
+| 2026-11-14 20:5x | DeepSeek | **暂停交班**：ADR-073 三块分离（感知/游戏/角色内核）设计完成，等复核；发行版最小运行器（阶段 6）已交付。 | 下一步 **S1：`GameSignal` 类型 + 模拟一局生成器**。基线 `baseline/GS-P0-BL-2026-11-14b`，HEAD `3ef97cb` 之后无未提交改动。IMU 物流中 |
 | 2026-11-14 19:3x | DeepSeek | 契约 v0.4 落地并端到端验证：`producer_boot_id` 改名、`magazine.seated`、`PreFeedLever`；板端 `MAGSEAT` 布防 → EVENT 到台架。 | 实测 `event kind=6 id=board-0684C7-1-evt-1`、`hello=1 states=9 events_new=1`。修三个缺陷：命令替换静默失败、半开连接占会话（15 s 空闲超时）、契约版本三处重复（新增 `check-contract-parity.ps1` 门禁） || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 || 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 |
 | 2026-11-14 01:3x | DeepSeek | **理论验证冲刺（V1–V5）+ 基线铸定 + 最小采购单**。V1：装 espup，真 `xtensa-esp32s3-none-elf` 编译（需 `-Zbuild-std=core,alloc`），新增 `firmware/kernel-shim`（panic_handler + newlib 分配器 + C ABI）并用 xtensa-gcc 完成 C↔Rust 链接。V2：五模块恶劣条件 6 项。V3：时间对齐 4 项。V4：新增 `ailive-gun-spirit-protocol` crate（10 项）。V5：纽扣续航模型。基线：`.cargo/audit.toml` 带到期日例外 + 修 quinn-udp，完整门禁 PASS，tag `baseline/GS-P0-BL-2026-11-14`。采购：第零批改为最小验证套件。 | 内核真目标 **155.6 KB**（未 LTO 上界，预算 338 KB）；V2/V3/V4 全绿；审计 0 漏洞 3 allowed 警告；最小套件 **约 100–180 元**，五项验证全过才买整机。 [验证计划](../P0A_VALIDATION_PLAN.md) |
@@ -127,6 +128,7 @@
 ```
 
 给 DeepSeek 的开场可以直接复制「请按 §1 对齐当前版本，先推进 §5 的 CP1 桌面对拍。完成后按 §11 回填实际改动、验证结果、证据和下一步。缺少本机源码或实物数据时，列出所需的最小文件或现场记录。」项目历史与早期讨论见 [11 月 13 日一次性交接稿](2026-11-13-p0a-deepseek.md)。
+
 
 
 
