@@ -269,6 +269,10 @@ bool client_connected() {
     return s_client.connected();
 }
 
+const char *ssid() {
+    return s_ssid.c_str();
+}
+
 const char *ip() {
     static String cached;
     cached = WiFi.localIP().toString();
@@ -276,6 +280,7 @@ const char *ip() {
 }
 
 }  // namespace gunspirit::wifi_link
+
 
 
 

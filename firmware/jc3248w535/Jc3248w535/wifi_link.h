@@ -34,4 +34,8 @@ bool client_connected();
 /// 当前 IP（未连接返回空串）。
 const char *ip();
 
+/// 当前配置的 SSID（未配置返回空串，不泄露密码）。
+const char *ssid();
+
 }  // namespace gunspirit::wifi_link
+

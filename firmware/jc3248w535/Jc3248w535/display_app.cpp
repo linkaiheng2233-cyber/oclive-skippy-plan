@@ -20,6 +20,8 @@
 
 #include "display.h"
 #include "imu.h"
+#include "settings_ui.h"
+#include "version.h"
 #include "gs_wire.h"
 #ifdef GS_KERNEL_ENABLED
 #include "kernel_bridge.h"
@@ -190,6 +192,39 @@ void add_button(lv_obj_t *screen, const char *text, lv_coord_t x, bool next) {
     lv_obj_center(button_label);
 }
 
+void fill_settings_snapshot(gunspirit::settings_ui::Snapshot *snapshot) {
+    snprintf(snapshot->firmware_version, sizeof(snapshot->firmware_version), "%s",
+             P0A_FIRMWARE_VERSION);
+#ifdef GS_WIFI_ENABLED
+    snapshot->wifi_present = true;
+    snapshot->wifi_connected = gunspirit::wifi_link::connected();
+    snapshot->wifi_client = gunspirit::wifi_link::client_connected();
+    snprintf(snapshot->wifi_ssid, sizeof(snapshot->wifi_ssid), "%s", gunspirit::wifi_link::ssid());
+    snprintf(snapshot->wifi_ip, sizeof(snapshot->wifi_ip), "%s", gunspirit::wifi_link::ip());
+#else
+    snapshot->wifi_present = false;
+    snprintf(snapshot->wifi_ssid, sizeof(snapshot->wifi_ssid), "%s", "-");
+    snprintf(snapshot->wifi_ip, sizeof(snapshot->wifi_ip), "%s", "-");
+#endif
+    snapshot->imu_present = gunspirit::imu_present();
+    snapshot->imu_auto = gunspirit::imu_auto_enabled();
+    snprintf(snapshot->imu_status, sizeof(snapshot->imu_status), "%s",
+             gunspirit::imu_status_name(gunspirit::imu_status()));
+#ifdef GS_KERNEL_ENABLED
+    snapshot->kernel_ready = gs_kernel_ready() == 1;
+    snapshot->kernel_abi = gs_kernel_abi_version();
+    snapshot->kernel_revision = static_cast<unsigned long long>(gs_kernel_state_revision());
+#endif
+    snapshot->heap_free = static_cast<unsigned>(ESP.getFreeHeap());
+    snapshot->heap_min = static_cast<unsigned>(ESP.getMinFreeHeap());
+    snapshot->psram_free = static_cast<unsigned>(ESP.getFreePsram());
+    snapshot->frames_ok = gunspirit::wire::frames_received();
+    snapshot->frames_bad = gunspirit::wire::frame_errors();
+}
+
+void on_settings_clicked(lv_event_t *) {
+    gunspirit::settings_ui::show();
+}
 void create_ui(lv_disp_t *display) {
     lv_obj_t *screen = lv_disp_get_scr_act(display);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
@@ -298,7 +333,35 @@ void handle_command(const char *command) {
         gunspirit::wire::end();
         return;
     }
+    // 设置层开关（串口可直接验证，不必触摸）。
+    if (strncmp(command, "SETTINGS", 8) == 0) {
+        const char *arg = command + 8;
+        while (*arg == ' ') {
+            ++arg;
+        }
+        if (strcmp(arg, "on") == 0) {
+            gunspirit::settings_ui::show();
+        } else if (strcmp(arg, "off") == 0) {
+            gunspirit::settings_ui::hide();
+        }
+        Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
+        return;
+    }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
+    // 设置层开关（串口可直接验证，不必触摸）。
+    if (strncmp(command, "SETTINGS", 8) == 0) {
+        const char *arg = command + 8;
+        while (*arg == ' ') {
+            ++arg;
+        }
+        if (strcmp(arg, "on") == 0) {
+            gunspirit::settings_ui::show();
+        } else if (strcmp(arg, "off") == 0) {
+            gunspirit::settings_ui::hide();
+        }
+        Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
+        return;
+    }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
     // 子命令：无参=读一次；AUTO on|off；CAL start|end|clear|status；RD/WR 探寄存器。
     if (strncmp(command, "IMU", 3) == 0) {
@@ -628,6 +691,8 @@ void setup() {
     lv_disp_t *display = bsp_display_start_with_config(&config);
     if (display && bsp_display_lock(1000)) {
         create_ui(display);
+    gunspirit::settings_ui::create(display);
+    gunspirit::settings_ui::set_provider(fill_settings_snapshot);
         bsp_display_unlock();
         display_ready = bsp_display_backlight_on() == ESP_OK;
     }
@@ -647,6 +712,7 @@ void loop() {
     }
 #endif
     gunspirit::imu_service(millis());
+    gunspirit::settings_ui::tick(millis());
 #ifdef GS_WIFI_ENABLED
     gunspirit::wifi_link::pump();
 #endif
@@ -657,6 +723,8 @@ void loop() {
     }
     delay(5);
 }
+
+
 
 
 

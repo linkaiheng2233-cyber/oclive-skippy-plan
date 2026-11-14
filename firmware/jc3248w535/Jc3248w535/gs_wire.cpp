@@ -44,6 +44,8 @@ bool is_known_type(uint8_t type) {
 }
 
 bool s_active = false;
+uint32_t s_frames_ok = 0;
+uint32_t s_frames_bad = 0;
 bool s_peer_seen = false;
 uint64_t s_revision = 0;
 uint32_t s_last_state_ms = 0;
@@ -281,9 +283,11 @@ size_t take_frame() {
         return 1;  // 滑动一字节重同步
     }
     if (s_buffer[2] != kVersion) {
+        ++s_frames_bad;
         return 1;
     }
     if (!is_known_type(s_buffer[3])) {
+        ++s_frames_bad;
         return 1;
     }
     const size_t payload_len = read_u16(&s_buffer[5]);
@@ -297,9 +301,11 @@ size_t take_frame() {
     const uint16_t expected = read_u16(&s_buffer[kHeaderLen + payload_len]);
     const uint16_t actual = crc16_ccitt_false(s_buffer, kHeaderLen + payload_len);
     if (expected != actual) {
+        ++s_frames_bad;
         Serial.printf("WIRE ERR CRC expected=0x%04X actual=0x%04X\n", expected, actual);
         return total;
     }
+    ++s_frames_ok;
     dispatch(s_buffer[3], &s_buffer[kHeaderLen], payload_len);
     return total;
 }
@@ -326,6 +332,14 @@ void end() {
 
 bool active() {
     return s_active;
+}
+
+uint32_t frames_received() {
+    return s_frames_ok;
+}
+
+uint32_t frame_errors() {
+    return s_frames_bad;
 }
 
 void set_frame_writer(FrameWriter writer) {
@@ -365,6 +379,7 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 
 
 
