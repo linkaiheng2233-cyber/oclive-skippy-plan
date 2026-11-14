@@ -244,6 +244,29 @@ void handle_command(const char *command) {
         return;
     }
 #endif
+#ifdef GS_KERNEL_ENABLED
+    // 无 IMU 时验证内核闭环：KGRIP <front|rear> <engaged|released>
+    if (strncmp(command, "KGRIP ", 6) == 0) {
+        const char *argument = command + 6;
+        const uint8_t grip = (strncmp(argument, "rear", 4) == 0) ? 1 : 0;
+        uint8_t contact = 0;
+        const char *separator = strchr(argument, ' ');
+        if (separator != nullptr && strncmp(separator + 1, "released", 8) == 0) {
+            contact = 1;
+        }
+        const int32_t rc =
+            gs_kernel_ingest_grip(grip, contact, contact == 0 ? 700 : 0, millis());
+        Serial.printf("KGRIP rc=%ld revision=%llu\n", static_cast<long>(rc),
+                      static_cast<unsigned long long>(gs_kernel_state_revision()));
+        return;
+    }
+    if (strcmp(command, "KTICK") == 0) {
+        const int32_t rc = gs_kernel_tick(millis());
+        Serial.printf("KTICK rc=%ld revision=%llu\n", static_cast<long>(rc),
+                      static_cast<unsigned long long>(gs_kernel_state_revision()));
+        return;
+    }
+#endif
     // 帧协议开关：开启后串口进入帧模式，ASCII 调试暂停；
     // 帧模式下输入 "WIRE off" 可随时退回（见 read_commands 的转义检测）。
     if (strcmp(command, "WIRE on") == 0) {
@@ -497,6 +520,13 @@ bool apply_mood(const char *id) {
 void setup() {
     Serial.begin(115200);
     report_memory("boot");
+#ifdef GS_KERNEL_ENABLED
+    {
+        const int32_t kernel_init = gs_kernel_init();
+        Serial.printf("KERNEL init=%ld abi=%u\n", static_cast<long>(kernel_init),
+                      static_cast<unsigned>(gs_kernel_abi_version()));
+    }
+#endif
 #ifdef USE_BLOB_ASSETS
     if (!load_assets_from_flash()) {
         Serial.println("ERR ASSETS_UNAVAILABLE");
@@ -533,6 +563,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 

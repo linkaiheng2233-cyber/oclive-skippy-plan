@@ -1,5 +1,9 @@
 #include "gs_wire.h"
 
+#ifdef GS_KERNEL_ENABLED
+#include "kernel_bridge.h"
+#endif
+
 namespace gunspirit::wire {
 namespace {
 
@@ -153,6 +157,20 @@ void send_nack(uint32_t sequence, uint8_t code) {
 /// 发布 STATE。M3 阶段**全部 fact 为 Unknown**：内核尚未上板，
 /// 伪造"看起来正常"的事实会污染主机判定，宁可显式 Unknown。
 void publish_state(uint32_t now_ms) {
+    // 内核就绪时，STATE 来自真实融合快照（同一份 Rust 编码器输出）。
+    // 缓冲区放静态区而不是栈：loopTask 栈余量只有数 KB。
+    static uint8_t s_state_payload[512];
+#ifdef GS_KERNEL_ENABLED
+    if (gs_kernel_ready() == 1) {
+        gs_kernel_tick(static_cast<uint64_t>(now_ms));
+        const int32_t written = gs_kernel_encode_state(s_state_payload, sizeof(s_state_payload));
+        if (written > 0) {
+            send_frame(kState, s_state_payload, static_cast<size_t>(written));
+            return;
+        }
+        Serial.printf("WIRE ERR KERNEL_ENCODE %ld\n", static_cast<long>(written));
+    }
+#endif
     uint8_t payload[320];
     size_t offset = 0;
     payload[offset++] = kStateFormatVersion;
@@ -330,4 +348,5 @@ void pump(uint32_t now_ms) {
 }
 
 }  // namespace gunspirit::wire
+
 

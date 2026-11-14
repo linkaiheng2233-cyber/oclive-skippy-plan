@@ -14,6 +14,7 @@ crate-type = ["staticlib"]
 [dependencies]
 ailive-gun-spirit-contracts = { path = "../../crates/ailive-gun-spirit-contracts", default-features = false }
 ailive-gun-spirit-perception-core = { path = "../../crates/ailive-gun-spirit-perception-core", default-features = false }
+ailive-gun-spirit-protocol = { path = "../../crates/ailive-gun-spirit-protocol", default-features = false }
 
 [profile.release]
 panic = "abort"

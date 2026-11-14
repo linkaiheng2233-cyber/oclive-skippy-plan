@@ -18,6 +18,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ailive-gun-spirit-protocol"
+version = "0.1.0"
+
+[[package]]
 name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -29,6 +33,7 @@ version = "0.0.0"
 dependencies = [
  "ailive-gun-spirit-contracts",
  "ailive-gun-spirit-perception-core",
+ "ailive-gun-spirit-protocol",
 ]
 
 [[package]]
