@@ -21,6 +21,9 @@
 #include "display.h"
 #include "imu.h"
 #include "gs_wire.h"
+#ifdef GS_KERNEL_ENABLED
+#include "kernel_bridge.h"
+#endif
 #include "esp_bsp.h"
 #include "portrait_assets.h"
 
@@ -229,6 +232,18 @@ void handle_command(const char *command) {
         return;
     }
 
+#ifdef GS_KERNEL_ENABLED
+    // 内核自检：调用 Rust 静态库的 C ABI，确认链接与运行都成立。
+    if (strcmp(command, "KERNEL") == 0) {
+        const uint32_t abi = gs_kernel_abi_version();
+        const int32_t revision = gs_kernel_self_test();
+        const uint64_t current = gs_kernel_state_revision();
+        Serial.printf("KERNEL abi=%u self_test_revision=%d current_revision=%llu\n",
+                      static_cast<unsigned>(abi), revision,
+                      static_cast<unsigned long long>(current));
+        return;
+    }
+#endif
     // 帧协议开关：开启后串口进入帧模式，ASCII 调试暂停；
     // 帧模式下输入 "WIRE off" 可随时退回（见 read_commands 的转义检测）。
     if (strcmp(command, "WIRE on") == 0) {
@@ -518,6 +533,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 

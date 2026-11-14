@@ -6,7 +6,9 @@ param(
     # 附加编译宏，例如 "-DDIAG_RADIO"。用于把 Wi-Fi/BLE 协议栈链进来测体积与内存。
     [string]$ExtraDefines,
     # 外部资产模式：像素不进固件，改为生成 assets.bin 供写入 ffat 资产区。
-    [switch]$BlobAssets
+    [switch]$BlobAssets,
+    # 链接 Rust 感知内核静态库（先跑 scripts/build-kernel-lib.ps1 生成）
+    [switch]$WithKernel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,7 +62,7 @@ foreach ($name in $drivers.Keys) {
     Copy-Item -LiteralPath $source -Destination $sketch
 }
 
-foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'gs_wire.cpp', 'gs_wire.h', 'lv_conf.h', 'portrait_assets.h') {
+foreach ($name in 'Jc3248w535.ino', 'display_app.cpp', 'imu.cpp', 'imu.h', 'gs_wire.cpp', 'gs_wire.h', 'kernel_bridge.h', 'lv_conf.h', 'portrait_assets.h') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Jc3248w535\$name") -Destination $sketch
 }
 $assetArguments = @($MumuRole, $sketch)
@@ -86,9 +88,22 @@ if (-not (Test-Path -LiteralPath $core -PathType Container) -or
 }
 
 $board = 'esp32:esp32:esp32s3:FlashSize=16M,FlashMode=qio,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc,PartitionScheme=fatflash'
+# Rust 内核静态库：位于 compiler.libraries.ldflags（Arduino 把它放在 --start-group 内），
+# 因此可以直接给完整路径，不必依赖 -L/-l 的搜索路径。
+$kernelFlags = ''
+if ($WithKernel) {
+    $kernelLibrary = Join-Path (Join-Path $ToolRoot 'kernel') 'libgs_kernel_shim.a'
+    if (-not (Test-Path -LiteralPath $kernelLibrary -PathType Leaf)) {
+        throw "Missing $kernelLibrary. Run scripts/build-kernel-lib.ps1 first."
+    }
+    $kernelFlags = '"' + $kernelLibrary + '"'
+}
 $lvglFlags = '-MMD -c -DLV_CONF_INCLUDE_SIMPLE -I"' + $sketch + '"'
 if ($BlobAssets) {
     $lvglFlags = $lvglFlags + ' -DUSE_BLOB_ASSETS'
+}
+if ($WithKernel) {
+    $lvglFlags = $lvglFlags + ' -DGS_KERNEL_ENABLED'
 }
 if ($ExtraDefines) {
     $lvglFlags = $lvglFlags + ' ' + $ExtraDefines
@@ -96,11 +111,14 @@ if ($ExtraDefines) {
 & $cli compile --fqbn $board --build-path (Join-Path $ToolRoot 'build') --output-dir $output `
     --build-property "compiler.c.extra_flags=$lvglFlags" `
     --build-property "compiler.cpp.extra_flags=$lvglFlags" `
+    --build-property "compiler.libraries.ldflags=$kernelFlags" `
     $sketch
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 Copy-Item -LiteralPath (Join-Path $ToolRoot 'sketch\mumu-assets.json') -Destination $output
+
+
 
 
 
