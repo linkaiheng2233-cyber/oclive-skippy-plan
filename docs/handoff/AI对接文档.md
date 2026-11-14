@@ -60,8 +60,8 @@
 ## 6. 进度日志（新→旧）
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
-| --- | --- | --- | --- || 日期 | 谁 | 做了什么 | 结论与证据 |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 || 日期 | 谁 | 做了什么 | 结论与证据 |
+| --- | --- | --- | --- || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 |
 | 2026-11-14 01:3x | DeepSeek | **理论验证冲刺（V1–V5）+ 基线铸定 + 最小采购单**。V1：装 espup，真 `xtensa-esp32s3-none-elf` 编译（需 `-Zbuild-std=core,alloc`），新增 `firmware/kernel-shim`（panic_handler + newlib 分配器 + C ABI）并用 xtensa-gcc 完成 C↔Rust 链接。V2：五模块恶劣条件 6 项。V3：时间对齐 4 项。V4：新增 `ailive-gun-spirit-protocol` crate（10 项）。V5：纽扣续航模型。基线：`.cargo/audit.toml` 带到期日例外 + 修 quinn-udp，完整门禁 PASS，tag `baseline/GS-P0-BL-2026-11-14`。采购：第零批改为最小验证套件。 | 内核真目标 **155.6 KB**（未 LTO 上界，预算 338 KB）；V2/V3/V4 全绿；审计 0 漏洞 3 allowed 警告；最小套件 **约 100–180 元**，五项验证全过才买整机。 [验证计划](../P0A_VALIDATION_PLAN.md) |
 
 | 2026-11-13 23:4x | DeepSeek | **形态重大修订（所有者新约束）**：无走线 / 内部空间极少 / 组件做配件 / 通用模块化按需组装 / 有线作为经济方案 / 免充电优先 / IMU 必需 / 主机供电改充放电 / 需操作界面。新增 `MODULAR_SENSOR_NETWORK.md`：按物理邻近分成 主机(含 IMU)+M-A 握把组(后握+扳机)+M-B 前部组(前握)+M-C 枪托组(肩托)，首发覆盖全枪；**扳机并入 M-A 走 GPIO 中断、不经无线**；唤醒=GPIO 事件+常连；延迟/电流档位表；同一 PCB 双电池仓；标准连接通道（广播→配对→NodeHello→NVS→白名单重连）；操作界面 MVP 五页；主机供电 P1 成品 / P2 开源小板；模块固件建议 embassy Rust 复用 no_std 契约。 | `dc98b8d`。**影响**：GPIO 预算作废；`NodeHello` 升为 P0 必需；采购清单需重写（约 200–420 元）；四项待决见该文 §9。 |
@@ -126,5 +126,6 @@
 ```
 
 给 DeepSeek 的开场可以直接复制「请按 §1 对齐当前版本，先推进 §5 的 CP1 桌面对拍。完成后按 §11 回填实际改动、验证结果、证据和下一步。缺少本机源码或实物数据时，列出所需的最小文件或现场记录。」项目历史与早期讨论见 [11 月 13 日一次性交接稿](2026-11-13-p0a-deepseek.md)。
+
 
 
