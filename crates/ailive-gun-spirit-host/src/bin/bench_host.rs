@@ -251,6 +251,21 @@ fn run_tcp(address: &str, seconds: u64) -> bool {
         "  hello={} states={} events_new={} events_dup={}",
         stats.hellos, stats.states, stats.events_new, stats.events_duplicate
     );
+    if let Some(snapshot) = session.snapshot() {
+        println!(
+            "  snapshot revision={} carrier={:?} front={:?} rear={:?} motion={:?} pose={:?} control={:?} nodes={}",
+            snapshot.revision,
+            snapshot.carrier_state,
+            snapshot.front_grip,
+            snapshot.rear_grip,
+            snapshot.motion,
+            snapshot.pose,
+            snapshot.primary_control,
+            snapshot.node_health.len()
+        );
+    } else {
+        println!("  snapshot: none");
+    }
     stats.hellos >= 1 && stats.states >= 1
 }
 
@@ -372,3 +387,4 @@ fn main() -> ExitCode {
         ExitCode::FAILURE
     }
 }
+

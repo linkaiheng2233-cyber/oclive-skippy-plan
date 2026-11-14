@@ -127,6 +127,13 @@ lv_obj_t *portrait_image;
 lv_obj_t *mood_label;
 lv_obj_t *page_label;
 // The current portrait and all LVGL objects are accessed under the BSP mutex.
+#ifdef GS_KERNEL_ENABLED
+// 台架合成观测（仅用于无 IMU 时验证内核闭环）：KSYNTH on 后每 200 ms 重新摄入
+// 当前 KGRIP 记录的握持状态，使事实不会因 TTL 过期。
+bool synth_on = false;
+uint8_t synth_grip_contact[2] = {1, 1};
+uint32_t synth_last_ms = 0;
+#endif
 size_t current_portrait = 0;
 uint32_t touch_sequence = 0;
 QueueHandle_t touch_events;
@@ -254,13 +261,18 @@ void handle_command(const char *command) {
         if (separator != nullptr && strncmp(separator + 1, "released", 8) == 0) {
             contact = 1;
         }
+        synth_grip_contact[grip] = contact;
         const int32_t rc =
             gs_kernel_ingest_grip(grip, contact, contact == 0 ? 700 : 0, millis());
         Serial.printf("KGRIP rc=%ld revision=%llu\n", static_cast<long>(rc),
                       static_cast<unsigned long long>(gs_kernel_state_revision()));
         return;
     }
-    if (strcmp(command, "KTICK") == 0) {
+    if (strncmp(command, "KSYNTH ", 7) == 0) {
+        synth_on = (strncmp(command + 7, "on", 2) == 0);
+        Serial.printf("KSYNTH %s\n", synth_on ? "on" : "off");
+        return;
+    }    if (strcmp(command, "KTICK") == 0) {
         const int32_t rc = gs_kernel_tick(millis());
         Serial.printf("KTICK rc=%ld revision=%llu\n", static_cast<long>(rc),
                       static_cast<unsigned long long>(gs_kernel_state_revision()));
@@ -556,6 +568,15 @@ void setup() {
 
 void loop() {
     read_commands();
+#ifdef GS_KERNEL_ENABLED
+    if (synth_on && millis() - synth_last_ms >= 200) {
+        synth_last_ms = millis();
+        for (uint8_t grip = 0; grip < 2; ++grip) {
+            gs_kernel_ingest_grip(grip, synth_grip_contact[grip],
+                                  synth_grip_contact[grip] == 0 ? 700 : 0, millis());
+        }
+    }
+#endif
     gunspirit::wire::pump(millis());
     TouchEvent touch;
     if (touch_events && xQueueReceive(touch_events, &touch, 0) == pdTRUE && Serial) {
@@ -563,6 +584,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 
