@@ -299,16 +299,62 @@ void handle_command(const char *command) {
         return;
     }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
-    // 到货后 5 分钟内确认"接线对不对、芯片真不真、数据有没有"。
+    // 诊断命令不需要显示就绪：IMU（ICM-45686）。
+    // 子命令：无参=读一次；AUTO on|off；CAL start|end|clear|status；RD/WR 探寄存器。
     if (strncmp(command, "IMU", 3) == 0) {
         const char *arg = command + 3;
         while (*arg == ' ') {
             ++arg;
         }
+        if (strcmp(arg, "AUTO on") == 0 || strcmp(arg, "AUTO off") == 0) {
+            if (strcmp(arg, "AUTO on") == 0) {
+                uint8_t chip = 0;
+                if (!gunspirit::imu_init(&chip)) {
+                    return;
+                }
+                gunspirit::imu_configure();
+                gunspirit::imu_set_auto(true);
+            } else {
+                gunspirit::imu_set_auto(false);
+            }
+            Serial.printf("IMU status=%s auto=%d\n", gunspirit::imu_status_name(gunspirit::imu_status()),
+                          gunspirit::imu_auto_enabled() ? 1 : 0);
+            return;
+        }
+        if (strncmp(arg, "CAL ", 4) == 0) {
+            const char *action = arg + 4;
+            if (strcmp(action, "start") == 0) {
+                gunspirit::imu_calibrate_begin();
+            } else if (strcmp(action, "end") == 0) {
+                gunspirit::imu_calibrate_end();
+            } else if (strcmp(action, "clear") == 0) {
+                gunspirit::imu_calibrate_clear();
+            } else if (strcmp(action, "status") == 0) {
+                float bx = 0;
+                float by = 0;
+                float bz = 0;
+                gunspirit::imu_bias(&bx, &by, &bz);
+                Serial.printf("IMU CAL active=%d bias_g=[%.4f,%.4f,%.4f]\n",
+                              gunspirit::imu_calibrating() ? 1 : 0, bx, by, bz);
+            } else {
+                Serial.println("ERR IMU CAL: start | end | clear | status");
+            }
+            return;
+        }
+        if (strcmp(arg, "STATUS") == 0) {
+            float bx = 0;
+            float by = 0;
+            float bz = 0;
+            gunspirit::imu_bias(&bx, &by, &bz);
+            Serial.printf("IMU status=%s auto=%d present=%d bias_g=[%.4f,%.4f,%.4f]\n",
+                          gunspirit::imu_status_name(gunspirit::imu_status()),
+                          gunspirit::imu_auto_enabled() ? 1 : 0, gunspirit::imu_present() ? 1 : 0,
+                          bx, by, bz);
+            return;
+        }
         if (*arg == '\0') {
             uint8_t chip = 0;
             if (!gunspirit::imu_init(&chip)) {
-                Serial.println("IMU ERR NO_DEVICE (check P3: 1=GND 2=3V3 3=GPIO17 4=GPIO18)");
                 return;
             }
             const bool configured = gunspirit::imu_configure();
@@ -320,9 +366,9 @@ void handle_command(const char *command) {
                 Serial.println("IMU ERR READ");
                 return;
             }
-            Serial.printf("IMU raw  accel=[%d,%d,%d] gyro=[%d,%d,%d]\n",
-                          reading.accel_raw[0], reading.accel_raw[1], reading.accel_raw[2],
-                          reading.gyro_raw[0], reading.gyro_raw[1], reading.gyro_raw[2]);
+            Serial.printf("IMU raw  accel=[%d,%d,%d] gyro=[%d,%d,%d]\n", reading.accel_raw[0],
+                          reading.accel_raw[1], reading.accel_raw[2], reading.gyro_raw[0],
+                          reading.gyro_raw[1], reading.gyro_raw[2]);
             Serial.printf("IMU eng  accel_g=[%.3f,%.3f,%.3f] gyro_dps=[%.2f,%.2f,%.2f]\n",
                           reading.accel_g[0], reading.accel_g[1], reading.accel_g[2],
                           reading.gyro_dps[0], reading.gyro_dps[1], reading.gyro_dps[2]);
@@ -337,8 +383,8 @@ void handle_command(const char *command) {
                 Serial.println("IMU ERR RD");
                 return;
             }
-            Serial.printf("IMU RD 0x%02X = 0x%02X (%u)\n", reg & 0xFF,
-                          static_cast<unsigned>(value), static_cast<unsigned>(value));
+            Serial.printf("IMU RD 0x%02X = 0x%02X (%u)\n", reg & 0xFF, static_cast<unsigned>(value),
+                          static_cast<unsigned>(value));
             return;
         }
         if (strncmp(arg, "WR ", 3) == 0) {
@@ -351,7 +397,7 @@ void handle_command(const char *command) {
             Serial.printf("IMU WR 0x%02X <- 0x%02X %s\n", reg & 0xFF, value & 0xFF, ok ? "ok" : "fail");
             return;
         }
-        Serial.println("ERR IMU: (none) | RD <hexreg> | WR <hexreg> <hexval>");
+        Serial.println("ERR IMU: (none) | AUTO on|off | CAL start|end|clear|status | STATUS | RD | WR");
         return;
     }
 
@@ -523,6 +569,16 @@ void read_commands() {
 
 }  // namespace
 
+#ifdef GS_KERNEL_ENABLED
+namespace {
+// IMU → 感知内核：只投递观测，不做判定；判定属于内核。
+void imu_ingest_to_kernel(int32_t gravity_x_mg, int32_t gravity_y_mg, int32_t gravity_z_mg,
+                          bool moving, uint64_t millis) {
+    gs_kernel_ingest_orientation(gravity_x_mg, gravity_y_mg, gravity_z_mg, 900, millis);
+    gs_kernel_ingest_motion(moving ? 1 : 0, millis);
+}
+}  // namespace
+#endif
 namespace gunspirit::wire {
 // 显示层实现：把表情 id 映射到立绘。找不到返回 false，由协议层回 NACK。
 bool apply_mood(const char *id) {
@@ -546,6 +602,7 @@ void setup() {
         const int32_t kernel_init = gs_kernel_init();
         Serial.printf("KERNEL init=%ld abi=%u\n", static_cast<long>(kernel_init),
                       static_cast<unsigned>(gs_kernel_abi_version()));
+        gunspirit::imu_set_ingest_sink(imu_ingest_to_kernel);
     }
 #endif
 #ifdef USE_BLOB_ASSETS
@@ -589,6 +646,7 @@ void loop() {
         }
     }
 #endif
+    gunspirit::imu_service(millis());
 #ifdef GS_WIFI_ENABLED
     gunspirit::wifi_link::pump();
 #endif
@@ -599,6 +657,8 @@ void loop() {
     }
     delay(5);
 }
+
+
 
 
 

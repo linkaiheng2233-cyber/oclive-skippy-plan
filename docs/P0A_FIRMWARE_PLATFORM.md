@@ -42,7 +42,8 @@
 | 阶段 | 周期/预算 | 说明 |
 |---|---|---|
 | `read_commands()` | 每轮 ≤128 B（帧模式 ≤256 B） | 串口 ASCII 或帧协议输入，**有界预算防止饿死触摸** |
-| 合成观测（`KSYNTH`） | 200 ms | **台架专用**，IMU 到货后删除 |
+| 合成观测（`KSYNTH`） | 200 ms | **台架专用**，IMU 自动采样开启后应关闭（代码会告警） |
+| IMU 采样服务（`imu_service`） | 100 Hz | 读三轴 → 扣零偏 → 运动判定 → 送内核；连续 5 次失败自动降级为 `fault` |
 | `wire::pump()` | 1 s | 帧协议 STATE 发布 |
 | `wifi_link::pump()` | 每轮 | 连接维护、客户端收发、发现广播 |
 | 触摸事件上报 | 每轮非阻塞 | 队列 `touch_events`（16 项） |
@@ -138,6 +139,9 @@
 | `PING` / `GET STATE` / `STATE <id>` / `STEP next|prev` | 基本联调 |
 | `MEM` | 内部堆/PSRAM/最大块/DMA/栈水位 |
 | `IMU` / `IMU RD <hex>` / `IMU WR <hex> <hex>` | IMU 生数据与寄存器探针 |
+| `IMU AUTO on\|off` | 开启/关闭 100 Hz 采样服务（自动送入感知内核） |
+| `IMU CAL start\|end\|clear\|status` | 静止标定：采集 200 样本求加速度计零偏，存 NVS 并在采样时扣除 |
+| `IMU STATUS` | 状态机（uninitialized/missing/ready/sampling/fault）、自动开关、零偏 |
 | `KGRIP <front|rear> <engaged|released>` | 合成握持观测（台架） |
 | `KSYNTH on|off` | 持续合成观测（台架） |
 | `KTICK` | 手动推进内核时间（触发 TTL） |
@@ -222,3 +226,4 @@
 2. **看门狗策略**：只挂 UI，还是也监控 reducer/sensor 心跳？
 3. **版本标识方案**：构建期注入 git 哈希（需要 build.ps1 支持）是否值得？
 4. **coredump 启用**：读出来做什么（串口打印？Overlay？）
+
