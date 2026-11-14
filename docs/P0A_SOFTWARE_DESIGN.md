@@ -275,6 +275,34 @@ hex = 01000003000E626F6172642D3030303030302D310100000000000000000000000000000000
 **静态对照已通过（2026-11-14，无需硬件）**：按 `gs_wire.cpp` 的 `publish_state()` 逐字段重建字节（`boot_id="board-000000-1"`、`revision=1`、`produced=0`、六 fact 全 Unknown），
 与 Rust 权威向量**逐字节一致**，长度同为 **97**。⇒ C++ 与 Rust 两套编码在字段顺序、端序、fact 布局上没有错位；上板只需确认运行期行为（分帧、重同步、每秒发布）。
 
+
+### 6.5.3 M4 第一半：内核在板上真实运行（`MEASURED`，2026-11-14）
+
+**构建集成**：`scripts/build-kernel-lib.ps1` 用 Xtensa 工具链产出 `libgs_kernel_shim.a`（843,336 B），`build.ps1 -WithKernel` 把它注入 `compiler.libraries.ldflags`（位于 Arduino 链接配方的 `--start-group` 内）。
+
+**真实体积增量**：
+
+| 构建 | 体积 | 增量 |
+|---|---|---|
+| 内嵌资产、无内核 | 1,552,601 B | — |
+| **内嵌资产、有内核** | **1,569,073 B** | **+16,472 B** |
+| 外部资产 + 内核 | 623,293 B（29%） | — |
+
+比此前 155.6 KB 的"未 LTO 上界"低一个数量级：LTO + `--gc-sections` 只保留可达代码。全局变量不变（75,176 B），说明内核不占静态 RAM。
+
+**上板运行验证**（烧 `app1` 后串口）：
+
+```
+KERNEL abi=1 self_test_revision=2 current_revision=0
+```
+
+- `abi=1`：C ABI 符号解析成功
+- `self_test_revision=2`：**Rust 内核在 ESP32-S3 上真实执行**——构造 reducer、摄入两条握持观测、revison 推进到 2
+- `current_revision=0`：另一个入口构造全新 reducer（无观测），符合预期
+
+⇒ ADR-069「内核跑在板上」从"编译可链接"升级为**运行期证据**。
+
+**下一步（M4 第二半）**：让内核驱动真实 STATE——扩展 C ABI 为 `gs_kernel_init` / `gs_kernel_ingest_*` / `gs_kernel_encode_state`，使 `gs_wire` 发布的 STATE 来自内核快照，而非当前的"全 Unknown 占位"。
 ## 6. 验收映射
 
 | 检查点 | 软件侧判据 |
@@ -291,6 +319,7 @@ hex = 01000003000E626F6172642D3030303030302D310100000000000000000000000000000000
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 
 
 
