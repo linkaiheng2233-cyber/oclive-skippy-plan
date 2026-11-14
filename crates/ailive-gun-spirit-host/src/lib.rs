@@ -5,6 +5,7 @@
 
 pub mod bench;
 mod oclive_adapter;
+pub mod scenario;
 
 pub use oclive_adapter::{
     OcliveSensorAdapter, OcliveSensorAdapterError, OcliveSensorTarget, OCLIVE_SENSOR_CONTEXT_SCHEMA,
