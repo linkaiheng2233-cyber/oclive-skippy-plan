@@ -354,12 +354,17 @@ fn run_serve(listener_address: &str, seconds: u64) -> bool {
 fn run_discover(seconds: u64) -> bool {
     use std::net::UdpSocket;
     println!("bench: discover");
-    let socket = match UdpSocket::bind("0.0.0.0:0") {
+    // 绑定固定端口接收板子的主动广播（板子在自己的子网里广播，必然到得了）。
+    // 若端口被占用则退回临时端口 + 主动请求。
+    let socket = match UdpSocket::bind("0.0.0.0:47901") {
         Ok(socket) => socket,
-        Err(error) => {
-            println!("  bind failed: {error}");
-            return false;
-        }
+        Err(_) => match UdpSocket::bind("0.0.0.0:0") {
+        Ok(socket) => socket,
+            Err(error) => {
+                println!("  bind failed: {error}");
+                return false;
+            }
+        },
     };
     if let Err(error) = socket.set_broadcast(true) {
         println!("  set_broadcast failed: {error}");
@@ -443,3 +448,4 @@ fn main() -> ExitCode {
         ExitCode::FAILURE
     }
 }
+

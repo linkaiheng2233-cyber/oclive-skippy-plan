@@ -138,9 +138,14 @@ void pump() {
             Serial.println("WIFI lost");
             stop_server();
         }
-        if (now - s_last_attempt_ms >= kReconnectIntervalMs) {
+        // 只在"已断开/连接失败/找不到网络"时重试；连接中不打断握手，
+        // 也不再调用 disconnect()——否则会打断正在进行的关联。
+        const wl_status_t status = WiFi.status();
+        const bool retryable = status == WL_DISCONNECTED || status == WL_CONNECT_FAILED ||
+                               status == WL_NO_SSID_AVAIL || status == WL_IDLE_STATUS;
+        if (retryable && now - s_last_attempt_ms >= kReconnectIntervalMs) {
             s_last_attempt_ms = now;
-            WiFi.disconnect();
+            Serial.printf("WIFI retry status=%d\n", static_cast<int>(status));
             WiFi.begin(s_ssid.c_str(), s_password.c_str());
         }
         return;
@@ -173,11 +178,17 @@ void pump() {
         wire::feed(static_cast<uint8_t>(byte));
     }
 
-    // 周期性广播一次自身地址，便于电脑侧发现（也用于诊断）。
+    // 周期性广播自身地址。**由板子主动广播**而不是等电脑来问：
+    // 电脑可能同时有多个网卡，向 255.255.255.255 的请求只会走默认路由，
+    // 未必落在热点子网上；而板子就站在热点里，它的广播一定到得了电脑。
     if (now - s_last_announce_ms >= kAnnounceIntervalMs) {
         s_last_announce_ms = now;
-        Serial.printf("WIFI ip=%s tcp=%u\n", WiFi.localIP().toString().c_str(),
-                      static_cast<unsigned>(kTcpPort));
+        const String announcement =
+            String("GS-HERE ") + WiFi.localIP().toString() + ":" + String(kTcpPort);
+        s_udp.beginPacket(IPAddress(255, 255, 255, 255), kDiscoveryPort);
+        s_udp.write(reinterpret_cast<const uint8_t *>(announcement.c_str()), announcement.length());
+        s_udp.endPacket();
+        Serial.printf("WIFI announce %s\n", announcement.c_str());
     }
 }
 
@@ -193,6 +204,17 @@ bool command(const char *line) {
         Serial.printf("WIFI status connected=%d ip=%s client=%d ssid=%s\n",
                       WiFi.status() == WL_CONNECTED ? 1 : 0, ip(),
                       s_client.connected() ? 1 : 0, s_has_credentials ? s_ssid.c_str() : "");
+        return true;
+    }
+    if (strcmp(argument, "scan") == 0) {
+        const int found = WiFi.scanNetworks(false, false);
+        Serial.printf("WIFI scan found=%d\n", found);
+        for (int index = 0; index < found; ++index) {
+            Serial.printf("  AP %d: ssid=%s rssi=%d channel=%d enc=%d\n", index,
+                          WiFi.SSID(index).c_str(), WiFi.RSSI(index), WiFi.channel(index),
+                          static_cast<int>(WiFi.encryptionType(index)));
+        }
+        WiFi.scanDelete();
         return true;
     }
     if (strcmp(argument, "forget") == 0) {
@@ -242,4 +264,6 @@ const char *ip() {
 }
 
 }  // namespace gunspirit::wifi_link
+
+
 
