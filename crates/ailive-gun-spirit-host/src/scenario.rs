@@ -11,21 +11,83 @@
 
 use serde::Deserialize;
 
+/// 一条校验问题。按"**位置 → 实际值 → 期望 → 原因 → 怎么改**"组织，
+/// 让地图作者不必读源码就能自己修好。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Issue {
+    /// 稳定代码（`arena.size` 等），便于测试断言与文档引用。
+    pub code: &'static str,
+    /// 字段路径，例如 `targets[0].count`。
+    pub path: String,
+    /// 实际写下的值。
+    pub actual: String,
+    /// 期望的范围/白名单。
+    pub expected: String,
+    /// 为什么有这条限制（安全 / 确定性 / 性能）。
+    pub reason: String,
+    /// 具体怎么改。
+    pub hint: String,
+}
+
+impl core::fmt::Display for Issue {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            formatter,
+            "[{code}] {path} = {actual}\n       期望: {expected}\n       原因: {reason}\n       修改: {hint}",
+            code = self.code,
+            path = self.path,
+            actual = self.actual,
+            expected = self.expected,
+            reason = self.reason,
+            hint = self.hint
+        )
+    }
+}
+
+fn issue(
+    code: &'static str,
+    path: impl Into<String>,
+    actual: impl Into<String>,
+    expected: impl Into<String>,
+    reason: impl Into<String>,
+    hint: impl Into<String>,
+) -> Issue {
+    Issue {
+        code,
+        path: path.into(),
+        actual: actual.into(),
+        expected: expected.into(),
+        reason: reason.into(),
+        hint: hint.into(),
+    }
+}
+
 /// 场景加载错误。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScenarioError {
     /// JSON 解析失败（字段类型错误、未知字段等）。
     Parse(String),
     /// 通过解析但违反规范。
-    Invalid(Vec<String>),
+    Invalid(Vec<Issue>),
 }
 
 impl core::fmt::Display for ScenarioError {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::Parse(message) => write!(formatter, "scenario parse error: {message}"),
+            Self::Parse(message) => {
+                writeln!(formatter, "JSON 解析失败：")?;
+                write!(formatter, "  {message}")
+            }
             Self::Invalid(issues) => {
-                write!(formatter, "scenario invalid: {}", issues.join("; "))
+                writeln!(
+                    formatter,
+                    "场景校验未通过，共 {} 个问题（下面每条都给出位置、期望与修改建议）：",
+                    issues.len()
+                )?;
+                for (index, item) in issues.iter().enumerate() {
+                    writeln!(formatter, "  {}. {item}", index + 1)?;
+                }
+                Ok(())
             }
         }
     }
@@ -288,9 +350,13 @@ impl Scenario {
     /// 从 JSON 文本加载并校验。
     pub fn from_json(text: &str) -> Result<Self, ScenarioError> {
         if text.len() > MAX_FILE_BYTES {
-            return Err(ScenarioError::Invalid(vec![format!(
-                "file too large: {} bytes (max {MAX_FILE_BYTES})",
-                text.len()
+            return Err(ScenarioError::Invalid(vec![issue(
+                "file.size",
+                "(文件)",
+                format!("{} 字节", text.len()),
+                format!("<= {MAX_FILE_BYTES} 字节"),
+                "场景是纯数据文件，超大文件通常意味着资源内联，不便分享与校验",
+                "把大资源移到 assets/ 并在 manifest 里登记，或用路径引用",
             )]));
         }
         let scenario: Self =
@@ -305,52 +371,96 @@ impl Scenario {
 
     /// 规范校验；返回所有问题（不是遇到第一个就返回），便于一次修完。
     #[must_use]
-    pub fn validate(&self) -> Vec<String> {
+    pub fn validate(&self) -> Vec<Issue> {
         let mut issues = Vec::new();
         if self.schema_version != 1 {
-            issues.push(format!(
-                "schema_version must be 1, got {}",
-                self.schema_version
+            issues.push(issue(
+                "schema.version",
+                "schema_version",
+                self.schema_version.to_string(),
+                "1",
+                "格式版本决定字段含义；跨版本猜测字段会静默读错数据",
+                "把 schema_version 改成 1；若需要新格式，先升级本仓库的场景规范",
             ));
         }
         if self.id.trim().is_empty() {
-            issues.push(String::from("id must not be empty"));
+            issues.push(issue(
+                "meta.id",
+                "id",
+                "(空)".to_owned(),
+                "非空字符串，建议 kebab-case，如 basic-range",
+                "id 用于分享、存档与回执中的唯一标识",
+                "填写一个描述性的 id，例如 \"my-range-01\"",
+            ));
         }
         if self.name.trim().is_empty() {
-            issues.push(String::from("name must not be empty"));
+            issues.push(issue(
+                "meta.name",
+                "name",
+                "(空)".to_owned(),
+                "非空字符串",
+                "名称会显示在场景列表与加载回执里",
+                "填写人类可读名称，例如 \"我的靶场\"",
+            ));
         }
         if self.arena.width <= 0.0
             || !self.arena.width.is_finite()
             || self.arena.height <= 0.0
             || !self.arena.height.is_finite()
         {
-            issues.push(format!(
-                "arena must be positive, got {} x {}",
-                self.arena.width, self.arena.height
+            issues.push(issue(
+                "arena.size",
+                "arena",
+                format!("width={} height={}", self.arena.width, self.arena.height),
+                "width/height 均为有限正数（米）",
+                "场地尺寸参与命中判定与渲染坐标换算，非正数会让坐标系退化",
+                "给出正数，例如 width=12, height=6",
             ));
         }
         if self.mode.duration_s <= 0.0
             || !self.mode.duration_s.is_finite()
             || self.mode.duration_s > MAX_DURATION_S
         {
-            issues.push(format!(
-                "duration_s must be in (0, {MAX_DURATION_S}], got {}",
-                self.mode.duration_s
+            issues.push(issue(
+                "mode.duration",
+                "mode.duration_s",
+                self.mode.duration_s.to_string(),
+                format!("(0, {MAX_DURATION_S}] 秒"),
+                "单局时长上限用于避免无限循环和多局并发的资源失控",
+                format!("把 duration_s 改到 {MAX_DURATION_S} 以内"),
             ));
         }
         if self.mode.kind == ModeKind::Wave && self.mode.waves.is_empty() {
-            issues.push(String::from("wave mode requires at least one wave"));
+            issues.push(issue(
+                "mode.waves",
+                "mode.waves",
+                "[]".to_owned(),
+                "至少 1 个波次对象 { at_s, targets }",
+                "wave 模式下没有波次就不会生成任何目标，玩家会看到空场",
+                "添加波次，例如 [{ \"at_s\": 0, \"targets\": 3 }]",
+            ));
         }
         let mut previous_at = f64::NEG_INFINITY;
         for (index, wave) in self.mode.waves.iter().enumerate() {
             if wave.at_s < previous_at {
-                issues.push(format!("wave {index}: at_s must be non-decreasing"));
+                issues.push(issue(
+                    "mode.waves.order",
+                    format!("mode.waves[{index}].at_s"),
+                    wave.at_s.to_string(),
+                    "不小于前一波次的 at_s（非递减）",
+                    "波次顺序决定生成节奏，逆序在固定 seed 下也会产生歧义",
+                    format!("把该波次的 at_s 调到不小于 {previous_at}"),
+                ));
             }
             previous_at = wave.at_s;
             if wave.targets == 0 || wave.targets > MAX_TARGETS {
-                issues.push(format!(
-                    "wave {index}: targets must be in 1..={MAX_TARGETS}, got {}",
-                    wave.targets
+                issues.push(issue(
+                    "mode.waves.targets",
+                    format!("mode.waves[{index}].targets"),
+                    wave.targets.to_string(),
+                    format!("1..={MAX_TARGETS}"),
+                    format!("单波目标数上限 {MAX_TARGETS}，超出会超出渲染与判定预算"),
+                    "把该波次的 targets 调进允许范围",
                 ));
             }
         }
@@ -358,53 +468,99 @@ impl Scenario {
             match cover {
                 Cover::Box { w, h, .. } | Cover::Wall { w, h, .. } => {
                     if *w <= 0.0 || !w.is_finite() || *h <= 0.0 || !h.is_finite() {
-                        issues.push(format!("cover {index}: w/h must be positive"));
+                        issues.push(issue(
+                            "cover.size",
+                            format!("cover[{index}]"),
+                            format!("w={w} h={h}"),
+                            "w/h 均为有限正数",
+                            "非正尺寸的掩体在几何求交时非法",
+                            "给出正数宽高，例如 w=1.2, h=1.0",
+                        ));
                     }
                 }
                 Cover::Circle { r, .. } => {
                     if *r <= 0.0 || !r.is_finite() {
-                        issues.push(format!("cover {index}: r must be positive"));
+                        issues.push(issue(
+                            "cover.radius",
+                            format!("cover[{index}].r"),
+                            r.to_string(),
+                            "有限正数",
+                            "非正半径的圆形掩体无法求交",
+                            "给出正数半径，例如 r=0.6",
+                        ));
                     }
                 }
             }
         }
         if self.targets.is_empty() {
-            issues.push(String::from("at least one target spec is required"));
+            issues.push(issue(
+                "targets.empty",
+                "targets",
+                "[]".to_owned(),
+                "至少 1 个目标描述（template/count/path/spawn）",
+                "没有目标就没有可射击对象，场景无法进行",
+                "添加一个目标描述，例如 drone + sine 路径",
+            ));
         }
         let mut total_targets = 0u32;
         for (index, target) in self.targets.iter().enumerate() {
             if target.count == 0 || target.count > MAX_TARGETS {
-                issues.push(format!(
-                    "target {index}: count must be in 1..={MAX_TARGETS}, got {}",
-                    target.count
+                issues.push(issue(
+                    "targets.count",
+                    format!("targets[{index}].count"),
+                    target.count.to_string(),
+                    format!("1..={MAX_TARGETS}"),
+                    format!("单条目标描述的实例上限 {MAX_TARGETS}"),
+                    "把 count 调进允许范围",
                 ));
             }
             total_targets = total_targets.saturating_add(target.count);
         }
         if total_targets > MAX_TARGETS {
-            issues.push(format!(
-                "total targets must be <= {MAX_TARGETS}, got {total_targets}"
+            issues.push(issue(
+                "targets.total",
+                "targets",
+                total_targets.to_string(),
+                format!("<= {MAX_TARGETS}"),
+                format!("全部目标实例合计上限 {MAX_TARGETS}，保证判定与渲染预算可控"),
+                "减少某几条描述的 count，或拆成多个场景",
             ));
         }
         if let Some(scoring) = &self.scoring {
             if !scoring.precision_bonus_radius_m.is_finite()
                 || scoring.precision_bonus_radius_m < 0.0
             {
-                issues.push(String::from(
-                    "scoring.precision_bonus_radius_m must be finite and >= 0",
+                issues.push(issue(
+                    "scoring.precision_radius",
+                    "scoring.precision_bonus_radius_m",
+                    scoring.precision_bonus_radius_m.to_string(),
+                    "有限且 >= 0 的米数",
+                    "该半径用于判定精度命中是否加分",
+                    "给出 0 或正数，例如 0.15",
                 ));
             }
         }
         for (index, cue) in self.audio.iter().enumerate() {
             if !is_safe_relative_path(&cue.asset) {
-                issues.push(format!("audio {index}: unsafe asset path {:?}", cue.asset));
+                issues.push(issue(
+                    "audio.path",
+                    format!("audio[{index}].asset"),
+                    format!("{:?}", cue.asset),
+                    "安全相对路径，如 sfx/hit.wav（禁绝对路径、..、URL、盘符）",
+                    "场景文件会被分享给他人，必须防止读取包外文件（路径穿越）",
+                    "改为包内相对路径，不要出现 .. 或盘符",
+                ));
             }
         }
         if let Some(presentation) = &self.presentation {
             if !(0.0..=1.0).contains(&presentation.character_visibility) {
-                issues.push(format!(
-                    "presentation.character_visibility must be in [0,1], got {}",
-                    presentation.character_visibility
+                issues.push(issue(
+                    "presentation.visibility",
+                    "presentation.character_visibility",
+                    presentation.character_visibility.to_string(),
+                    "[0, 1]",
+                    "可见度是渲染透明度，超出范围没有物理意义",
+                    "给出 0 到 1 之间的小数，例如 0.8",
                 ));
             }
         }
@@ -548,7 +704,7 @@ mod tests {
         let error = Scenario::from_json(&value.to_string()).expect_err("schema 2 must fail");
         match error {
             ScenarioError::Invalid(issues) => {
-                assert!(issues.iter().any(|issue| issue.contains("schema_version")));
+                assert!(issues.iter().any(|issue| issue.code == "schema.version"));
             }
             other => panic!("expected Invalid, got {other:?}"),
         }
@@ -561,9 +717,7 @@ mod tests {
         let error = Scenario::from_json(&value.to_string()).expect_err("unsafe path must fail");
         match error {
             ScenarioError::Invalid(issues) => {
-                assert!(issues
-                    .iter()
-                    .any(|issue| issue.contains("unsafe asset path")));
+                assert!(issues.iter().any(|issue| issue.code == "audio.path"));
             }
             other => panic!("expected Invalid, got {other:?}"),
         }
@@ -591,7 +745,7 @@ mod tests {
         let error = Scenario::from_json(&value.to_string()).expect_err("over limit must fail");
         match error {
             ScenarioError::Invalid(issues) => {
-                assert!(issues.iter().any(|issue| issue.contains("total targets")));
+                assert!(issues.iter().any(|issue| issue.code == "targets.total"));
             }
             other => panic!("expected Invalid, got {other:?}"),
         }
@@ -605,8 +759,8 @@ mod tests {
         let error = Scenario::from_json(&value.to_string()).expect_err("must fail");
         match error {
             ScenarioError::Invalid(issues) => {
-                assert!(issues.iter().any(|issue| issue.contains("arena")));
-                assert!(issues.iter().any(|issue| issue.contains("duration_s")));
+                assert!(issues.iter().any(|issue| issue.code == "arena.size"));
+                assert!(issues.iter().any(|issue| issue.code == "mode.duration"));
             }
             other => panic!("expected Invalid, got {other:?}"),
         }
@@ -619,12 +773,73 @@ mod tests {
         let error = Scenario::from_json(&value.to_string()).expect_err("must fail");
         match error {
             ScenarioError::Invalid(issues) => {
-                assert!(issues
-                    .iter()
-                    .any(|issue| issue.contains("at least one wave")));
+                assert!(issues.iter().any(|issue| issue.code == "mode.waves"));
             }
             other => panic!("expected Invalid, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn diagnostics_state_location_expectation_reason_and_fix() {
+        // 报错质量要求：位置、实际值、期望、原因、怎么改——五段齐全，且一次报全。
+        let scenario = Scenario {
+            schema_version: 2,
+            id: String::from("x"),
+            name: String::from("x"),
+            author: None,
+            seed: 0,
+            arena: Arena {
+                width: 1.0,
+                height: 1.0,
+                background: None,
+            },
+            mode: Mode {
+                kind: ModeKind::Wave,
+                duration_s: 900.0,
+                waves: Vec::new(),
+            },
+            cover: Vec::new(),
+            targets: vec![TargetSpec {
+                template: Primitive::Drone,
+                count: 1,
+                hp: 1,
+                path: TargetPath::Static,
+                spawn: Spawn {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                },
+            }],
+            scoring: None,
+            audio: vec![AudioCue {
+                id: String::from("hit"),
+                asset: String::from("../escape.wav"),
+            }],
+            presentation: None,
+        };
+        let issues = scenario.validate();
+        assert!(issues.len() >= 4, "expected several issues, got {issues:?}");
+        let rendered = issues
+            .iter()
+            .map(|issue| issue.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        for required in ["期望:", "原因:", "修改:"] {
+            assert!(
+                rendered.contains(required),
+                "missing {required} in {rendered}"
+            );
+        }
+        for issue in &issues {
+            assert!(!issue.path.is_empty(), "empty path: {issue:?}");
+            assert!(!issue.actual.is_empty(), "empty actual: {issue:?}");
+            assert!(!issue.hint.is_empty(), "empty hint: {issue:?}");
+        }
+        let codes: Vec<&str> = issues.iter().map(|issue| issue.code).collect();
+        assert!(codes.contains(&"schema.version"));
+        assert!(codes.contains(&"mode.duration"));
+        assert!(codes.contains(&"mode.waves"));
+        assert!(codes.contains(&"audio.path"));
     }
 
     #[test]
