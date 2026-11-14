@@ -351,7 +351,7 @@ fn run_serve(listener_address: &str, seconds: u64) -> bool {
 }
 /// UDP 广播发现：向 `255.255.255.255:47901` 发 `GS-DISCOVER`，
 /// 等板子回 `GS-HERE <ip>:<port>`，再用返回地址建立 TCP 会话。
-fn run_discover(seconds: u64) -> bool {
+fn run_discover(seconds: u64, target: Option<&str>) -> bool {
     use std::net::UdpSocket;
     println!("bench: discover");
     // 绑定固定端口接收板子的主动广播（板子在自己的子网里广播，必然到得了）。
@@ -359,7 +359,7 @@ fn run_discover(seconds: u64) -> bool {
     let socket = match UdpSocket::bind("0.0.0.0:47901") {
         Ok(socket) => socket,
         Err(_) => match UdpSocket::bind("0.0.0.0:0") {
-        Ok(socket) => socket,
+            Ok(socket) => socket,
             Err(error) => {
                 println!("  bind failed: {error}");
                 return false;
@@ -371,7 +371,13 @@ fn run_discover(seconds: u64) -> bool {
         return false;
     }
     let _ = socket.set_read_timeout(Some(std::time::Duration::from_millis(800)));
-    if let Err(error) = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901") {
+    // 未指定目标时向广播地址请求；指定了就用单播（跨网卡场景的兜底）。
+    let request_target = match target {
+        Some(address) => format!("{address}:47901"),
+        None => String::from("255.255.255.255:47901"),
+    };
+    println!("  request target: {request_target}");
+    if let Err(error) = socket.send_to(b"GS-DISCOVER", &request_target) {
         println!("  broadcast failed: {error}");
         return false;
     }
@@ -385,14 +391,14 @@ fn run_discover(seconds: u64) -> bool {
                 if let Some(rest) = text.strip_prefix("GS-HERE ") {
                     return run_tcp(rest.trim(), 8);
                 }
-                // 不是应答就再广播一次，继续等。
-                let _ = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901");
+                // 不是应答就再请求一次，继续等。
+                let _ = socket.send_to(b"GS-DISCOVER", &request_target);
             }
             Err(error)
                 if error.kind() == std::io::ErrorKind::WouldBlock
                     || error.kind() == std::io::ErrorKind::TimedOut =>
             {
-                let _ = socket.send_to(b"GS-DISCOVER", "255.255.255.255:47901");
+                let _ = socket.send_to(b"GS-DISCOVER", &request_target);
             }
             Err(error) => {
                 println!("  recv failed: {error}");
@@ -423,7 +429,8 @@ fn main() -> ExitCode {
                 .get(1)
                 .and_then(|value| value.parse().ok())
                 .unwrap_or(10);
-            run_discover(seconds)
+            let target = args.get(2).map(String::as_str);
+            run_discover(seconds, target)
         }
         Some("--serve") => {
             let address = args
@@ -448,4 +455,3 @@ fn main() -> ExitCode {
         ExitCode::FAILURE
     }
 }
-

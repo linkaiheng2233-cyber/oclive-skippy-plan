@@ -24,6 +24,7 @@ WiFiClient s_client;
 String s_ssid;
 String s_password;
 bool s_has_credentials = false;
+bool s_writer_socket = false;
 bool s_started = false;
 uint32_t s_last_attempt_ms = 0;
 uint32_t s_last_announce_ms = 0;
@@ -157,13 +158,35 @@ void pump() {
 
     service_discovery();
 
+    // 周期性主动广播自身地址。必须在"是否有客户端"判断**之前**：
+    // 电脑可能有多个网卡，向 255.255.255.255 的请求只走默认路由，
+    // 未必落在热点子网；而板子就在热点内，它的广播一定到得了电脑。
+    // 如果放在 client 判断之后，无人连入时永远不会广播（先有鸡还是先有蛋）。
+    if (now - s_last_announce_ms >= kAnnounceIntervalMs) {
+        s_last_announce_ms = now;
+        const String announcement =
+            String("GS-HERE ") + WiFi.localIP().toString() + ":" + String(kTcpPort);
+        s_udp.beginPacket(IPAddress(255, 255, 255, 255), kDiscoveryPort);
+        s_udp.write(reinterpret_cast<const uint8_t *>(announcement.c_str()), announcement.length());
+        s_udp.endPacket();
+        Serial.printf("WIFI announce %s\n", announcement.c_str());
+    }
+
     if (!s_client.connected()) {
+        if (s_writer_socket) {
+            s_writer_socket = false;
+            wire::set_frame_writer(nullptr);
+            Serial.println("WIFI client gone");
+        }
         WiFiClient candidate = s_server.available();
         if (candidate) {
             s_client = candidate;
             s_client.setNoDelay(true);
             s_udp.flush();
             wire::set_frame_writer(socket_writer);
+            s_writer_socket = true;
+            // 网络客户端一律按帧协议服务：ASC信号只用于串口台架调试。
+            wire::begin();
             Serial.printf("WIFI client %s\n", s_client.remoteIP().toString().c_str());
         }
         return;
@@ -178,18 +201,7 @@ void pump() {
         wire::feed(static_cast<uint8_t>(byte));
     }
 
-    // 周期性广播自身地址。**由板子主动广播**而不是等电脑来问：
-    // 电脑可能同时有多个网卡，向 255.255.255.255 的请求只会走默认路由，
-    // 未必落在热点子网上；而板子就站在热点里，它的广播一定到得了电脑。
-    if (now - s_last_announce_ms >= kAnnounceIntervalMs) {
-        s_last_announce_ms = now;
-        const String announcement =
-            String("GS-HERE ") + WiFi.localIP().toString() + ":" + String(kTcpPort);
-        s_udp.beginPacket(IPAddress(255, 255, 255, 255), kDiscoveryPort);
-        s_udp.write(reinterpret_cast<const uint8_t *>(announcement.c_str()), announcement.length());
-        s_udp.endPacket();
-        Serial.printf("WIFI announce %s\n", announcement.c_str());
-    }
+
 }
 
 bool command(const char *line) {
@@ -264,6 +276,8 @@ const char *ip() {
 }
 
 }  // namespace gunspirit::wifi_link
+
+
 
 
 

@@ -231,7 +231,7 @@ ESP32-S3 **单射频**：Wi-Fi STA（连 PC）+ BLE（连模块）走 `esp_coex`
 | **M2** | ✅ 完成 | `bench.rs` 会话状态机（7 项单测）+ `ailive-gun-spirit-bench --simulate` **PASS**：`hello=1 states=2 states_rejected=1 events_new=2 events_dup=1 malformed=1` |
 | **M3** | ✅ **已上板验证通过（2026-11-14）** | 固件新增 `gs_wire.*`（CRC16/分帧/HELLO/EXPR/PING/PONG/ACK/NACK + 占位 STATE）与 `WIRE on|off`；构建 1,552,601 B（74%）。**验证通道**：`scripts/serial-bridge.ps1`（串口↔TCP，自测 PASS）+ `ailive-gun-spirit-bench --tcp` |
 | M4 | 待做 | 前置已就绪（shim 链接验证通过） |
-| M5 | 待做 | — |
+| **M5** | ✅ **已上板验证（2026-11-14）** | Wi-Fi STA + NVS 凭据 + TCP 服务端 + UDP 主动广播发现；实测见 §6.5.5 |
 
 **M3 的诚实边界**：板端 STATE 目前**六个 fact 全为 Unknown**（`NeverObserved`），因为我方内核尚未上板；不伪造"看起来正常"的事实。M4 接入内核后由真实融合结果替换。
 
@@ -331,6 +331,31 @@ snapshot revision=2
 **关于 `KSYNTH`**：无 IMU 时的台架合成观测源（每 200 ms 重摄入当前 `KGRIP` 握持状态），**代码中明确标注为合成**。IMU 到货后删除该路径，改为 I²C 读取循环；内核、协议、台架一行不用改。
 
 **里程碑状态**：M1 / M2 / M3 / **M4 全部完成**；剩余 M5（Wi-Fi STA 自动发现与断线重连）。
+
+### 6.5.5 M5 完成：Wi-Fi 自动发现与断线重连（`MEASURED`，2026-11-14）
+
+**拓扑**：板子接入 2.4 GHz 热点（本次用电脑的 Windows 移动热点），电脑与板子同一子网。
+
+**关键实测**：
+
+| 项 | 结果 |
+|---|---|
+| 凭据持久化 | 重启后自动重连：`WIFI connecting ssid=SUPERMUMU0090` → `WIFI connected ip=192.168.137.54 tcp=47900 udp=47901` |
+| **纯广播发现** | `bench --discover 10`（**不知道 IP**）→ `GS-HERE 192.168.137.54:47900` → 自动连接 |
+| **Wi-Fi 上的帧协议** | `hello=1 states=11` |
+| **内核快照过 Wi-Fi** | `revision=2 carrier=Known(Held) front=Known(Engaged) rear=Known(Engaged) nodes=1` |
+
+**过程中修掉三个真缺陷**：
+
+1. 重连每 5 s 调 `disconnect()+begin()`，**打断正在进行的关联**（日志刷 `wifi: sta is connecting, return error`）。改为只在 `WL_DISCONNECTED` / `WL_CONNECT_FAILED` / `WL_NO_SSID_AVAIL` / `WL_IDLE_STATUS` 时 `begin()`，不再 `disconnect()`。
+2. 周期性广播写在了"是否有客户端"判断之后 → **无人连入时永不广播**（先有鸡还是先有蛋）。移到判断之前。
+3. socket 客户端接入后**没有进入帧模式** → 只有应答、没有周期 STATE。改为客户端接入即 `wire::begin()`，断开时把帧出口切回串口。
+
+**发现机制的设计取舍**：不采用"电脑广播查询"，因为电脑常有多网卡，`255.255.255.255` 只走默认路由，未必落在热点子网。改为**板子每 3 s 主动广播** `GS-HERE <ip>:<port>`——它就在该子网内，广播必然到达；台架绑定 47901 监听，并保留主动请求作为兜底（`--discover <秒> <IP>`）。
+
+**构建约束**：Wi-Fi 版必须用外部资产——内嵌资产 + Wi-Fi 会超过 2 MiB。实测 `-BlobAssets -WithKernel -WithWifi` = 1,221,129 B（58%）。
+
+**凭据安全**：只写板端 NVS（明文，已知风险）；`scripts/wifi-provision.ps1` 用 `Read-Host -AsSecureString` 输入，不回显、不进仓库、不进对话；`WIFI forget` 可清除。
 ## 6. 验收映射
 
 | 检查点 | 软件侧判据 |
@@ -347,6 +372,7 @@ snapshot revision=2
 2. **镜像余量**：当前 1,537,328 B / 2 MiB 槽；立绘占 ≈946 KB。若把立绘移入 `ffat`（11.875 MiB，空）可腾出 ≈1.44 MiB——但**先测加入内核后的实际体积**再决定。
 3. **`AngularRateSample` 未验证**（`GS-CONTRACT-005`）：符号/轴向/量程都属设计值，首颗 IMU 后按协议变更抬版本。
 4. **正式 OCLive 接入**：仍按所有者安排暂缓；先用 PC 台架测试程序。
+
 
 
 
