@@ -84,6 +84,9 @@
 **会话记录**：跨机器接续用 `sessions/`（脱敏可读摘录 + 新机引导语 `sessions/resume-prompt.md`）。原始 DSH 会话含本机路径与网络标识，不入公开仓。
 ## 7. 证据入口
 
+**会话记录**：跨机器接续用 `sessions/`（脱敏可读摘录 + 新机引导语 `sessions/resume-prompt.md`）。原始 DSH 会话含本机路径与网络标识，**不入公开仓**。
+
+
 | 想核对什么 | 从哪里读 |
 | --- | --- |
 | 软件当前源码与回归 | [Rust 契约](../../crates/ailive-gun-spirit-contracts/src/lib.rs) · [感知内核](../../crates/ailive-gun-spirit-perception-core/src/lib.rs) · [桌面模拟器](../../crates/ailive-gun-spirit-host/src/bin/simulator.rs) · [9 帧回归](../../crates/ailive-gun-spirit-host/tests/golden_frames.rs) |
