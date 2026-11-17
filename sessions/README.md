@@ -27,8 +27,17 @@ DSH 的会话是 `session.v4.jsonl.zstd`（多帧拼接、约 7 MB 压缩 / 39 M
 1. **克隆到与原来相同的路径**（可选但更省事）：
 
    ```powershell
-   git clone https://github.com/linkaiheng2233-cyber/oclive-skippy-plan.git E:\OCLive\oclive-四季宝器灵
+   # 必须在 clone 时指定工作分支（默认分支 main 不含本项目进度）
+   git clone -b docs/personal-document-archive-20261030 `
+     https://github.com/linkaiheng2233-cyber/oclive-skippy-plan.git E:\OCLive\oclive-四季宝器灵
    ```
+
+   已经克隆过也可以在仓库里切：
+   ```powershell
+   git checkout -b docs/personal-document-archive-20261030 origin/docs/personal-document-archive-20261030
+   ```
+
+   基线 tag 可直接检出：`git checkout baseline/GS-P0-BL-2026-11-14b`
 
 2. 在该目录打开 DSH（新会话即可）。`AGENTS.md` 会被自动加载。
 
@@ -64,3 +73,4 @@ node scripts/export-session.mjs $src 'sessions/<日期>-<主题>.md' --redact <�
 
 - 本目录的文件**会进入公开仓库**，提交前务必检查脱敏清单是否生效。
 - 会话记录是**过程证据**；技术结论以 `docs/` 下的领域文档与 ADR 为准，二者冲突时以文档为准。
+

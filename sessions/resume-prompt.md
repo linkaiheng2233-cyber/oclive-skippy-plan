@@ -23,7 +23,8 @@
 
 ```
 请检查环境并报告：
-- git status -sb（应当干净；分支 docs/personal-document-archive-20261030）
+- git status -sb（应当干净；**必须在工作分支** docs/personal-document-archive-20261030 上，
+  默认分支 main 不含本项目进度）
 - git log --oneline -3
 - ./scripts/verify.ps1 -SkipAudit 是否 PASS（cargo audit 需要网络，失败不算回归，见 GS-DEP-002）
 - Rust / Node / lv_font_conv 是否可用（板端构建需要 espup + Arduino CLI，见 docs/P0A_FIRMWARE_PLATFORM.md）
@@ -51,3 +52,4 @@
 | 阻塞 | **IMU（ICM-45686）未到货**；发射器选型待定（20 号后） |
 | 技术债 | `GS-DEP-003`：`KSYNTH` 合成观测必须在 IMU 到货后删除 |
 | 基线 tag | `baseline/GS-P0-BL-2026-11-14b` |
+
