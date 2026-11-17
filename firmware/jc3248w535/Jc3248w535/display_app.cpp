@@ -397,6 +397,36 @@ void handle_command(const char *command) {
         Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
         return;
     }
+    // 裸探针：不依赖 imu_init，扫描常见 IMU 地址并读多个 WHO_AM_I 候选寄存器。
+    // 因为 601N1 板号可能装 ICM-45686 / ICM-42688 / BMI323 三种芯片，
+    // 必须先确定真实型号再决定用哪套寄存器表。
+    if (strcmp(command, "IMU PROBE") == 0) {
+        Wire.begin(17, 18);
+        Serial.println("IMU PROBE begin (SDA=17 SCL=18)");
+        const uint8_t addresses[] = {0x68, 0x69, 0x6A, 0x6B};
+        const uint8_t registers[] = {0x00, 0x01, 0x72, 0x75};
+        int found = 0;
+        for (uint8_t address : addresses) {
+            Wire.beginTransmission(address);
+            if (Wire.endTransmission() != 0) {
+                continue;
+            }
+            ++found;
+            Serial.printf("IMU PROBE addr=0x%02X", static_cast<unsigned>(address));
+            for (uint8_t reg : registers) {
+                Wire.beginTransmission(address);
+                Wire.write(reg);
+                uint8_t value = 0;
+                if (Wire.endTransmission(false) == 0 && Wire.requestFrom(static_cast<int>(address), 1) == 1) {
+                    value = static_cast<uint8_t>(Wire.read());
+                }
+                Serial.printf("  [0x%02X]=0x%02X", static_cast<unsigned>(reg), static_cast<unsigned>(value));
+            }
+            Serial.println();
+        }
+        Serial.printf("IMU PROBE done found=%d\n", found);
+        return;
+    }
     // I2C 总线扫描：接上新器件后先确认地址，避免"接线对了但地址不对"。
     if (strcmp(command, "I2C SCAN") == 0) {
         Wire.begin(17, 18);
@@ -436,6 +466,36 @@ void handle_command(const char *command) {
             gunspirit::settings_ui::hide();
         }
         Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
+        return;
+    }
+    // 裸探针：不依赖 imu_init，扫描常见 IMU 地址并读多个 WHO_AM_I 候选寄存器。
+    // 因为 601N1 板号可能装 ICM-45686 / ICM-42688 / BMI323 三种芯片，
+    // 必须先确定真实型号再决定用哪套寄存器表。
+    if (strcmp(command, "IMU PROBE") == 0) {
+        Wire.begin(17, 18);
+        Serial.println("IMU PROBE begin (SDA=17 SCL=18)");
+        const uint8_t addresses[] = {0x68, 0x69, 0x6A, 0x6B};
+        const uint8_t registers[] = {0x00, 0x01, 0x72, 0x75};
+        int found = 0;
+        for (uint8_t address : addresses) {
+            Wire.beginTransmission(address);
+            if (Wire.endTransmission() != 0) {
+                continue;
+            }
+            ++found;
+            Serial.printf("IMU PROBE addr=0x%02X", static_cast<unsigned>(address));
+            for (uint8_t reg : registers) {
+                Wire.beginTransmission(address);
+                Wire.write(reg);
+                uint8_t value = 0;
+                if (Wire.endTransmission(false) == 0 && Wire.requestFrom(static_cast<int>(address), 1) == 1) {
+                    value = static_cast<uint8_t>(Wire.read());
+                }
+                Serial.printf("  [0x%02X]=0x%02X", static_cast<unsigned>(reg), static_cast<unsigned>(value));
+            }
+            Serial.println();
+        }
+        Serial.printf("IMU PROBE done found=%d\n", found);
         return;
     }
     // I2C 总线扫描：接上新器件后先确认地址，避免"接线对了但地址不对"。
@@ -845,6 +905,7 @@ void loop() {
     }
     delay(5);
 }
+
 
 
 

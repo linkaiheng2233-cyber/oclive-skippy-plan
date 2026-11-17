@@ -14,6 +14,20 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# arduino-cli 无法遍历 Windows junction（重解析点）：即使目标目录和工具都存在，
+# 也会报 "Error loading hardware platform: following symlink ... cannot find the
+# path specified"，并误判为"未安装平台/缺少工具"而反复下载。
+# 本机 %LOCALAPPDATA%\OCLive 是指向 E:\OCLive-data\AppData-Local-OCLive 的 junction，
+# 因此工具根若位于 junction 之下，统一改用真实路径。
+$localRootItem = Get-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'OCLive') -Force -ErrorAction SilentlyContinue
+if ($localRootItem -and (($localRootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+    $realLocalRoot = $localRootItem.LinkTarget
+    if ($realLocalRoot -and (Test-Path -LiteralPath $realLocalRoot)) {
+        $ToolRoot = Join-Path $realLocalRoot (Split-Path -Leaf $ToolRoot)
+    }
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $workspace = Split-Path -Parent $repoRoot
 if (-not $VendorSketch) {
@@ -122,6 +136,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 Copy-Item -LiteralPath (Join-Path $ToolRoot 'sketch\mumu-assets.json') -Destination $output
+
 
 
 
