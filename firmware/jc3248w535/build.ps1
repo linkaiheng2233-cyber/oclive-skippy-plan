@@ -24,18 +24,7 @@ if (-not $MumuRole) {
     $MumuRole = Join-Path $workspace 'oclivenewnew\distros\chat-pro\roles\mumu'
 }
 if (-not $AssetPython) {
-    # arduino-cli 无法遍历 Windows junction（重解析点）：即使目标存在，也会报
-# "Error loading hardware platform: following symlink ... cannot find the path specified"。
-# 本机 %LOCALAPPDATA%\OCLive 是指向 E:\OCLive-data\... 的 junction，因此改用真实路径。
-$localRoot = Join-Path $env:LOCALAPPDATA 'OCLive'
-$localRootItem = Get-Item -LiteralPath $localRoot -Force -ErrorAction SilentlyContinue
-if ($localRootItem -and (($localRootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
-    $realRoot = $localRootItem.LinkTarget
-    if ($realRoot -and (Test-Path -LiteralPath $realRoot)) {
-        $ToolRoot = Join-Path $realRoot (Split-Path -Leaf $ToolRoot)
-    }
-}
-$AssetPython = Join-Path $ToolRoot 'assets-env\Scripts\python.exe'
+    $AssetPython = Join-Path $ToolRoot 'assets-env\Scripts\python.exe'
 }
 if (-not (Get-Command -Name $AssetPython -ErrorAction SilentlyContinue)) {
     throw 'Set up the asset Python environment in the firmware README, or pass -AssetPython.'
@@ -133,6 +122,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 Copy-Item -LiteralPath (Join-Path $ToolRoot 'sketch\mumu-assets.json') -Destination $output
+
 
 
 
