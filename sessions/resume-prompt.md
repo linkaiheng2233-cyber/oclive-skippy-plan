@@ -4,6 +4,17 @@
 
 ---
 
+## 第零段：先确认真实目录布局（**两个仓**）
+
+本仓 Rust workspace 依赖兄弟仓 `../oclivenewnew`。克隆时必须两个仓做兄弟：
+
+```powershell
+./scripts/bootstrap-clone.ps1          # 一键
+# 或手动：
+git clone -b docs/personal-document-archive-20261030 https://github.com/linkaiheng2233-cyber/oclive-skippy-plan.git E:\OCLive\oclive-四季宝器灵
+git clone -b fix/chat-pro-rc9-feedback-20261106 https://github.com/linkaiheng2233-cyber/oclivenewnew.git E:\OCLive\oclivenewnew
+```
+
 ## 第一段：让 DSH 先读文件
 
 ```
@@ -52,5 +63,6 @@
 | 阻塞 | **IMU 已到货（GY-601N1，芯片型号待 `IMU PROBE` 确认）**；待焊排针/转接线（SH1.25 4P → 杜邦母）；发射器选型待定（20 号后） |
 | 技术债 | `GS-DEP-003`：`KSYNTH` 合成观测必须在 IMU 到货后删除 |
 | 基线 tag | `baseline/GS-P0-BL-2026-11-14b` |
+
 
 

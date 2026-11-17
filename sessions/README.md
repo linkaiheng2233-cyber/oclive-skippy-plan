@@ -22,6 +22,14 @@ DSH 的会话是 `session.v4.jsonl.zstd`（多帧拼接、约 7 MB 压缩 / 39 M
 
 > 如果将来需要"逐字节还原会话"，请把原始 `.zstd` 放到**私有位置**（私有仓库或网盘），不要放进这个公开仓库。
 
+## ⚠️ 先决条件：需要克隆**两个仓**
+
+本仓 Rust workspace 依赖兄弟仓 `../oclivenewnew/kernel/crates/oclive_kernel_*`。
+只克隆本仓，`cargo` 会报找不到依赖。
+
+一键脚本：`./scripts/bootstrap-clone.ps1`（自动克隆两仓 + `cargo check` + 门禁）。
+手动见 `docs/handoff/交接文档-2026-11-17.md` §1。
+
 ## 在另一台电脑上接续（推荐流程）
 
 1. **克隆到与原来相同的路径**（可选但更省事）：
@@ -73,6 +81,7 @@ node scripts/export-session.mjs $src 'sessions/<日期>-<主题>.md' --redact <�
 
 - 本目录的文件**会进入公开仓库**，提交前务必检查脱敏清单是否生效。
 - 会话记录是**过程证据**；技术结论以 `docs/` 下的领域文档与 ADR 为准，二者冲突时以文档为准。
+
 
 
 
