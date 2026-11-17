@@ -19,6 +19,7 @@
 #endif
 
 #include "display.h"
+#include <Wire.h>
 #include "imu.h"
 #include "settings_ui.h"
 #include "version.h"
@@ -396,6 +397,21 @@ void handle_command(const char *command) {
         Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
         return;
     }
+    // I2C 总线扫描：接上新器件后先确认地址，避免"接线对了但地址不对"。
+    if (strcmp(command, "I2C SCAN") == 0) {
+        Wire.begin(17, 18);
+        Serial.println("I2C SCAN begin (SDA=17 SCL=18)");
+        int found = 0;
+        for (uint8_t address = 0x08; address <= 0x77; ++address) {
+            Wire.beginTransmission(address);
+            if (Wire.endTransmission() == 0) {
+                Serial.printf("I2C DEVICE 0x%02X\n", static_cast<unsigned>(address));
+                ++found;
+            }
+        }
+        Serial.printf("I2C SCAN done found=%d\n", found);
+        return;
+    }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
     // 触摸探针开关：TOUCHDBG on|off
     if (strncmp(command, "TOUCHDBG", 8) == 0) {
@@ -420,6 +436,21 @@ void handle_command(const char *command) {
             gunspirit::settings_ui::hide();
         }
         Serial.printf("SETTINGS visible=%d\n", gunspirit::settings_ui::visible() ? 1 : 0);
+        return;
+    }
+    // I2C 总线扫描：接上新器件后先确认地址，避免"接线对了但地址不对"。
+    if (strcmp(command, "I2C SCAN") == 0) {
+        Wire.begin(17, 18);
+        Serial.println("I2C SCAN begin (SDA=17 SCL=18)");
+        int found = 0;
+        for (uint8_t address = 0x08; address <= 0x77; ++address) {
+            Wire.beginTransmission(address);
+            if (Wire.endTransmission() == 0) {
+                Serial.printf("I2C DEVICE 0x%02X\n", static_cast<unsigned>(address));
+                ++found;
+            }
+        }
+        Serial.printf("I2C SCAN done found=%d\n", found);
         return;
     }
     // 诊断命令不需要显示就绪：IMU（ICM-45686）。
@@ -814,6 +845,8 @@ void loop() {
     }
     delay(5);
 }
+
+
 
 
 

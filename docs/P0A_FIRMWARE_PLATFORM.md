@@ -139,6 +139,7 @@
 | `PING` / `GET STATE` / `STATE <id>` / `STEP next|prev` | 基本联调 |
 | `MEM` | 内部堆/PSRAM/最大块/DMA/栈水位 |
 | `IMU` / `IMU RD <hex>` / `IMU WR <hex> <hex>` | IMU 生数据与寄存器探针 |
+| `I2C SCAN` | 扫描 I2C 总线（0x08–0x77），接线后先确认器件地址 |
 | `IMU AUTO on\|off` | 开启/关闭 100 Hz 采样服务（自动送入感知内核） |
 | `IMU CAL start\|end\|clear\|status` | 静止标定：采集 200 样本求加速度计零偏，存 NVS 并在采样时扣除 |
 | `IMU STATUS` | 状态机（uninitialized/missing/ready/sampling/fault）、自动开关、零偏 |
@@ -228,6 +229,7 @@
 2. **看门狗策略**：只挂 UI，还是也监控 reducer/sensor 心跳？
 3. **版本标识方案**：构建期注入 git 哈希（需要 build.ps1 支持）是否值得？
 4. **coredump 启用**：读出来做什么（串口打印？Overlay？）
+
 
 
 
