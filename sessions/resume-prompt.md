@@ -49,7 +49,8 @@
 | 板卡 | 晶彩 JC3248W535（ESP32-S3，16 MB flash / 8 MB OPI PSRAM），右 RESET / 左 BOOT |
 | 固件构建 | `./scripts/flash-p0a.ps1`（= `build.ps1 -BlobAssets -WithKernel -WithWifi`） |
 | 现状 | 契约 v0.4；M1–M5 上板验证；Wi-Fi 自动发现；屏幕 OS 两页；发行版运行器 |
-| 阻塞 | **IMU（ICM-45686）未到货**；发射器选型待定（20 号后） |
+| 阻塞 | **IMU 已到货（GY-601N1，芯片型号待 `IMU PROBE` 确认）**；待焊排针/转接线（SH1.25 4P → 杜邦母）；发射器选型待定（20 号后） |
 | 技术债 | `GS-DEP-003`：`KSYNTH` 合成观测必须在 IMU 到货后删除 |
 | 基线 tag | `baseline/GS-P0-BL-2026-11-14b` |
+
 

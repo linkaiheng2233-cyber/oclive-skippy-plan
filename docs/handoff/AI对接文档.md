@@ -4,7 +4,7 @@
 
 **更新规则**　开工先核对 §1 的仓库状态与 §5 的检查点。每次实质推进后更新 §1、对应检查点及 §6 最新一行。先把新技术决定或实测写入对应来源，再回填此处的摘要和链接。收工可直接使用 §11 的模板。
 
-**最后核对**　2026-11-14 20:55（北京时间）。**当前暂停**：等待所有者复核 ADR-073（三块分离）；下一步 `S1 GameSignal`。IMU 未到货。
+**最后核对**　2026-11-18 00:15（北京时间）。IMU 已到货（GY-601N1），等待接线与 `IMU PROBE` 判型；ADR-073 待复核，下一步 `S1 GameSignal`。
 
 ## 1. 状态快照
 
@@ -16,6 +16,7 @@
 | 工程门禁 | **`./scripts/verify.ps1 -SkipAudit` PASS**：fmt（含 protocol）、workspace 边界、distro layout、**契约版本一致性**、Clippy、all-targets、doctest、Schema 零漂移（v0.4）、no_std 双配置对拍。**`cargo audit` 因网络拉不到 advisory 数据库而未执行**（环境问题，例外仍是 `GS-DEP-001`，到期 2026-12-14）。 |
 | **no_std 能力** | **`contracts` 与 `perception-core` 可在 `no_std` + `alloc` 下编译**；对拍已覆盖 **default(9 帧)/repeat(11 帧)/stale(6 帧)** 三场景、两种配置，sha256 全一致；并已**脚本化挂入 `verify.ps1`**（`scripts/check-nostd-parity.ps1`）。CP1 **完整通过**。 |
 | 开放审计项 | `GS-DEP-001` / `RUSTSEC-2026-0459`。当前 Windows Host 依赖链经相邻仓 `oclive_sqlx`、`sqlx-sqlite 0.8.6` 引入 bundled `libsqlite3-sys 0.30.1`，修复路径见 §4。 [技术债台账](../TECHNICAL_DEBT.md#2-当前台账) · [RustSec 公告](https://rustsec.org/advisories/RUSTSEC-2026-0459.html) |
+| **IMU（2026-11-18 到货）** | **GY-601N1 模块已到货**：两排 2.54 排针孔（芯片组 + UART 组）。**同板号可能装 ICM-45686 / ICM-42688 / BMI323**，板号不能当型号，必须用固件 `IMU PROBE` 读 ID 判定。接线走 **P3（右上偏左 1.25mm）/ P4（最右上 1.0mm）**，同网络 1=GND、2=3.3V、3=GPIO17、4=GPIO18；**P1（Type-C 旁 4 针）用途未核对，禁用**。IMU 不需独立电源（P3 供 3.3V @8mA）。 |
 | 板卡 | **双向联调已通过（2026-11-13 晚）**：只读校验与备份一致；`app1` 图库固件写入回读校验通过并已选中；`PING`/`STATE`/`STEP` 全 `OK`；触屏 `Next,Next,Prev` 回传 `TOUCH 1..3` 与对应 `MOOD`；验收脚本退出码 0。**当前板上运行 `app1`**，出厂 `app0` 完好可切回。 [到货与实机记录](../test-worksheets/01-硬件到货清单.md#p0-a-双向联调验收2026-11-13-21582205measured) |
 | 阶段 | P0-A 主线：**感知内核已链接上板并由内核驱动 STATE；Wi-Fi 自动发现与会话已实测；契约 v0.4 已落地**。剩余硬件卡点：IMU 到货（物流中）→ 真实姿态；发射器选型（20 号后）→ 支架与装配。P0-B 保留后置。 [实施路线](../ROADMAP.md) |
 
@@ -61,6 +62,7 @@
 
 | 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- |
+| 2026-11-18 00:1x | DeepSeek | IMU 到货后的接线方案落地：新增固件 `I2C SCAN` 与 `IMU PROBE`（裸探针，不依赖 imu_init）；核对连接器（P3 右上偏左/P4 最右上/P1 禁用/P 2 为 8 针 GPIO 排/两个 2 针为电池与喇叭）；修复构建环境（arduino-cli 无法遍历 junction）。 | 固件 1,206,973 B；构建恢复正常。GY-601N1 芯片型号待 `IMU PROBE` 判定（45686→0x72=0xE9 / 42688→0x75=0x47 / BMI323→0x00=0x43）。**IMU 无需独立电源**，4 芯线由 P3 供电 |
 | 2026-11-14 20:5x | DeepSeek | **暂停交班**：ADR-073 三块分离（感知/游戏/角色内核）设计完成，等复核；发行版最小运行器（阶段 6）已交付。 | 下一步 **S1：`GameSignal` 类型 + 模拟一局生成器**。基线 `baseline/GS-P0-BL-2026-11-14b`，HEAD `3ef97cb` 之后无未提交改动。IMU 物流中 |
 | 2026-11-14 19:3x | DeepSeek | 契约 v0.4 落地并端到端验证：`producer_boot_id` 改名、`magazine.seated`、`PreFeedLever`；板端 `MAGSEAT` 布防 → EVENT 到台架。 | 实测 `event kind=6 id=board-0684C7-1-evt-1`、`hello=1 states=9 events_new=1`。修三个缺陷：命令替换静默失败、半开连接占会话（15 s 空闲超时）、契约版本三处重复（新增 `check-contract-parity.ps1` 门禁） || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 || 日期 | 谁 | 做了什么 | 结论与证据 |
 | --- | --- | --- | --- || 2026-11-14 14:5x | DeepSeek | **M1–M5 全部完成并上板验证**：帧协议载荷（STATE/EVENT，30 项测试）、PC 台架程序（simulate/serve/tcp/discover）、板端帧协议（ASCII 可回退）、Rust 内核链接进固件并由内核驱动真实 STATE、Wi-Fi STA+NVS 凭据+TCP 服务端+UDP 主动广播发现。 | 关键实测：M3 `hello=1 states=15`；M4 `KERNEL abi=2` 且快照 `carrier=Known(Held)`、内核增量仅 **16,472 B**；M5 纯广播发现 `bench --discover 10` 自动找到 `192.168.137.54:47900` 并收到 `hello=1 states=11`。Wi-Fi 构建 1,221,129 B（58%，必须配外部资产）。详见 `P0A_SOFTWARE_DESIGN.md` §6.5.1–§6.5.5 |
@@ -137,6 +139,7 @@
 ```
 
 给 DeepSeek 的开场可以直接复制「请按 §1 对齐当前版本，先推进 §5 的 CP1 桌面对拍。完成后按 §11 回填实际改动、验证结果、证据和下一步。缺少本机源码或实物数据时，列出所需的最小文件或现场记录。」项目历史与早期讨论见 [11 月 13 日一次性交接稿](2026-11-13-p0a-deepseek.md)。
+
 
 
 
